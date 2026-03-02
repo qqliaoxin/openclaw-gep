@@ -42,6 +42,7 @@ class OpenClawMesh {
             capsuleCreatorShare: Number(options.capsuleCreatorShare ?? process.env.OPENCLAW_CAPSULE_CREATOR_SHARE ?? 0.9),
             capsulePublishFee: Number(options.capsulePublishFee ?? process.env.OPENCLAW_CAPSULE_PUBLISH_FEE ?? 1),
             taskPublishFee: Number(options.taskPublishFee ?? process.env.OPENCLAW_TASK_PUBLISH_FEE ?? 0),
+            taskPublishDedupWindowMs: Number(options.taskPublishDedupWindowMs ?? process.env.OPENCLAW_TASK_PUBLISH_DEDUP_MS ?? 15000),
             txConfirmations: options.txConfirmations || {
                 transfer: 1,
                 capsulePublish: 1,
@@ -90,6 +91,7 @@ class OpenClawMesh {
         this.consensusPersistTimer = null;
         this.consensusPersistPending = false;
         this.consensusPersistInFlight = null;
+        this.recentTaskPublishes = new Map(); // fingerprint -> { taskId, ts }
     }
     
     generateNodeId() {
@@ -1261,11 +1263,19 @@ class OpenClawMesh {
         if (!this.initialized) {
             throw new Error('Mesh not initialized');
         }
-        
+
         task.publisher = task.publisher || this.options.nodeId;
+        const dedupWindowMs = Number(this.options.taskPublishDedupWindowMs || 15000);
+        const taskFingerprint = this.computeTaskFingerprint(task);
+        const duplicateTaskId = this.findRecentDuplicateTaskId(taskFingerprint, dedupWindowMs);
+        if (duplicateTaskId) {
+            return { taskId: duplicateTaskId, txReceipts: [], deduplicated: true };
+        }
+
         task.published_at = new Date().toISOString();
         task.taskId = this.computeTaskId(task);
         task.escrowAccountId = this.getEscrowAccountId(task.taskId);
+        task.contentFingerprint = taskFingerprint;
 
         const txReceipts = [];
         if (this.options.taskPublishFee > 0) {
@@ -1306,8 +1316,9 @@ class OpenClawMesh {
 
         const taskId = await this.taskBazaar.publishTask(task);
         await this.node.broadcastTask(task);
+        this.recentTaskPublishes.set(taskFingerprint, { taskId, ts: Date.now() });
         console.log(`🎯 Task published: ${taskId}`);
-        return { taskId, txReceipts };
+        return { taskId, txReceipts, deduplicated: false };
     }
 
     async purchaseCapsule(assetId, buyerNodeId = null) {
@@ -1411,6 +1422,52 @@ class OpenClawMesh {
         const crypto = require('crypto');
         const content = task.description + task.publisher + task.published_at;
         return 'task_' + crypto.createHash('sha256').update(content).digest('hex').slice(0, 16);
+    }
+
+    normalizeTaskDescription(description) {
+        return String(description || '').trim().replace(/\s+/g, ' ');
+    }
+
+    normalizeTaskTags(tags) {
+        if (!Array.isArray(tags)) return [];
+        return Array.from(new Set(tags.map(t => String(t || '').trim().toLowerCase()).filter(Boolean))).sort();
+    }
+
+    computeTaskFingerprint(task) {
+        const crypto = require('crypto');
+        const normalized = {
+            description: this.normalizeTaskDescription(task.description),
+            publisher: String(task.publisher || this.options.nodeId || '').trim(),
+            bountyAmount: Number(task?.bounty?.amount || 0),
+            bountyToken: String(task?.bounty?.token || 'CLAW').trim().toUpperCase(),
+            tags: this.normalizeTaskTags(task.tags || [])
+        };
+        return 'taskfp_' + crypto.createHash('sha256').update(JSON.stringify(normalized)).digest('hex').slice(0, 24);
+    }
+
+    findRecentDuplicateTaskId(fingerprint, windowMs) {
+        if (!fingerprint) return null;
+        const now = Date.now();
+        for (const [fp, info] of this.recentTaskPublishes.entries()) {
+            if (!info || !info.ts || now - info.ts > windowMs) {
+                this.recentTaskPublishes.delete(fp);
+            }
+        }
+        const cached = this.recentTaskPublishes.get(fingerprint);
+        if (cached?.taskId && now - cached.ts <= windowMs) {
+            return cached.taskId;
+        }
+        const tasks = this.taskBazaar?.getTasks ? this.taskBazaar.getTasks() : [];
+        for (const existing of tasks) {
+            const publishedAt = new Date(existing?.published_at || 0).getTime();
+            if (!Number.isFinite(publishedAt) || now - publishedAt > windowMs) continue;
+            const existingFingerprint = existing?.contentFingerprint || this.computeTaskFingerprint(existing || {});
+            if (existingFingerprint === fingerprint && existing?.taskId) {
+                this.recentTaskPublishes.set(fingerprint, { taskId: existing.taskId, ts: publishedAt });
+                return existing.taskId;
+            }
+        }
+        return null;
     }
     
     // 关闭

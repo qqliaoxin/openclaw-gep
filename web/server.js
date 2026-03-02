@@ -252,14 +252,21 @@ class WebUIServer {
                 try {
                     const payload = JSON.parse(body);
                     if (this.mesh) {
-                        const taskId = await this.mesh.publishTask({
+                        const result = await this.mesh.publishTask({
                             description: payload.description,
                             bounty: { amount: payload.bounty || 100, token: 'CLAW' },
                             tags: payload.tags || [],
                             publisher: payload.publisher
                         });
-                        const task = this.mesh.taskBazaar.getTask(taskId.taskId || taskId);
-                        data = { success: true, task, taskId: taskId.taskId || taskId, txReceipts: taskId.txReceipts || [] };
+                        const taskId = result.taskId || result;
+                        const task = this.mesh.taskBazaar.getTask(taskId);
+                        data = {
+                            success: true,
+                            task,
+                            taskId,
+                            txReceipts: result.txReceipts || [],
+                            deduplicated: result.deduplicated === true
+                        };
                     } else {
                         data = { error: 'Mesh not initialized' };
                     }
@@ -1756,12 +1763,42 @@ class WebUIServer {
             }
         }
         
+        let publishTaskInFlight = false;
+        const localTaskPublishCache = new Map();
+
+        function normalizeTaskPublishInput(desc, bounty, tags) {
+            const normalizedTags = Array.from(new Set((tags || []).map(t => String(t || '').trim().toLowerCase()).filter(Boolean))).sort();
+            return {
+                description: String(desc || '').trim().replace(/\s+/g, ' '),
+                bounty: Number(bounty || 0),
+                tags: normalizedTags
+            };
+        }
+
+        function computeTaskPublishSignature(desc, bounty, tags) {
+            const normalized = normalizeTaskPublishInput(desc, bounty, tags);
+            return JSON.stringify(normalized);
+        }
+
         async function publishTask(e) {
             e.preventDefault();
             const desc = document.getElementById('taskDesc').value;
             const bounty = parseInt(document.getElementById('taskBounty').value);
             const tags = document.getElementById('taskTags').value.split(',').map(t => t.trim()).filter(t => t);
-            
+            const now = Date.now();
+            const signature = computeTaskPublishSignature(desc, bounty, tags);
+            const lastAt = localTaskPublishCache.get(signature) || 0;
+            if (publishTaskInFlight) {
+                document.getElementById('publishResult').innerHTML = '<span style="color:#f5c542">' + (currentLang === 'zh' ? '⏳ 正在发布，请勿重复点击' : '⏳ Publishing, please wait') + '</span>';
+                return;
+            }
+            if (now - lastAt < 3000) {
+                document.getElementById('publishResult').innerHTML = '<span style="color:#f5c542">' + (currentLang === 'zh' ? '⚠️ 已忽略短时间重复发布' : '⚠️ Ignored duplicate publish in short window') + '</span>';
+                return;
+            }
+            const submitBtn = document.querySelector('#taskForm button[type=\"submit\"]');
+            publishTaskInFlight = true;
+            if (submitBtn) submitBtn.disabled = true;
             try {
                 const res = await fetch('/api/task/publish', {
                     method: 'POST',
@@ -1769,11 +1806,17 @@ class WebUIServer {
                     body: JSON.stringify({ description: desc, bounty, tags })
                 });
                 const data = await res.json();
+                localTaskPublishCache.set(signature, Date.now());
                 const successMessage = currentLang === 'zh'
-                    ? '✅ 任务已发布：' + (data.task || '')
-                    : '✅ Task published: ' + (data.task || '');
+                    ? '✅ 任务已发布：' + (data.taskId || '')
+                    : '✅ Task published: ' + (data.taskId || '');
                 if (data.success) {
                     let message = successMessage;
+                    if (data.deduplicated) {
+                        message = (currentLang === 'zh'
+                            ? 'ℹ️ 检测到短时间重复发布，已返回已有任务：'
+                            : 'ℹ️ Duplicate publish detected in short window, returned existing task: ') + (data.taskId || '');
+                    }
                     if (data.txReceipts && data.txReceipts.length > 0) {
                         const timeouts = data.txReceipts.filter(r => !r.confirmed).length;
                         message += '<br>' + renderTxReceipts(data.txReceipts);
@@ -1791,6 +1834,9 @@ class WebUIServer {
                 }
             } catch (e) {
                 document.getElementById('publishResult').innerHTML = '<span style="color:red">❌ Error: ' + e.message + '</span>';
+            } finally {
+                publishTaskInFlight = false;
+                if (submitBtn) submitBtn.disabled = false;
             }
         }
         
