@@ -177,6 +177,7 @@ async function init(args) {
 // 启动节点
 async function start(args, configPath = null) {
     const config = loadConfig(configPath);
+    const isWindows = process.platform === 'win32';
     const safeDashboard = args.includes('--safe-dashboard') || config.safeDashboard === true;
     const transferDisabled = safeDashboard || config.transferDisabled === true;
     const cliGenesisNodes = parseAddressList(getArg(args, '--genesis-nodes', ''));
@@ -199,7 +200,7 @@ async function start(args, configPath = null) {
         isGenesisNode: args.includes('--genesis') || config.isGenesisNode || false,
         bootstrapLedger: args.includes('--bootstrap-ledger') ? true : (config.bootstrapLedger === true ? true : undefined),
         genesisOperatorAccountId: config.genesisOperatorAccountId || null,
-        acceptTasks: !(args.includes('--no-task') || config.acceptTasks === false),
+        acceptTasks: isWindows ? false : !(args.includes('--no-task') || config.acceptTasks === false),
         safeDashboard,
         disableTransfer: transferDisabled
     };
@@ -215,6 +216,10 @@ async function start(args, configPath = null) {
         config.transferDisabled = true;
         saveConfig(config);
         console.log('🔒 Safe dashboard mode enabled and saved to config (transfer disabled).');
+    }
+    if (isWindows) {
+        console.log('⚠️  Windows detected: task receiving is disabled.');
+        console.log('   在 Windows 系统下不能接 OpenClaw 任务（不抢单、不执行），其它功能正常。');
     }
     
     const mesh = new OpenClawMesh(options);
@@ -364,6 +369,11 @@ async function taskCommand(subcommand, args) {
             await listTasks();
             break;
         case 'submit':
+            if (process.platform === 'win32') {
+                console.error('❌ task submit is disabled on Windows.');
+                console.error('   Windows 系统下不允许接收/提交 OpenClaw 任务。');
+                return;
+            }
             await submitSolution(args);
             break;
         default:
