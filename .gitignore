@@ -4,4 +4,4 @@ node_modules
 task-workspace
 package-lock.json
 **.DS_Store
-openclaw-task-*.tgz
+openclaw-gep-*.tgz

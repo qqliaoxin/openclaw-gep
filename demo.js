@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OpenClaw Task 完整演示
+ * OpenClaw GEP 完整演示
  * 展示所有核心功能
  */
 
@@ -24,7 +24,7 @@ function log(title, message = '') {
 
 async function demo() {
     console.log('\n' + '='.repeat(70));
-    console.log(`${colors.magenta}${colors.bright}  🌐 OpenClaw Task 完整演示${colors.reset}`);
+    console.log(`${colors.magenta}${colors.bright}  🌐 OpenClaw GEP 完整演示${colors.reset}`);
     console.log('='.repeat(70) + '\n');
     
     // 1. 初始化节点

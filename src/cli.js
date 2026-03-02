@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OpenClaw Task CLI
+ * OpenClaw GEP CLI
  * 命令行接口
  */
 
@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 
 // 默认配置文件路径
-let CONFIG_FILE = path.join(process.env.HOME || process.env.USERPROFILE, '.openclaw-task.json');
+let CONFIG_FILE = path.join(process.env.HOME || process.env.USERPROFILE, '.openclaw-gep.json');
 
 // 解析命令行参数
 function getArg(args, key, defaultVal = null) {
@@ -68,10 +68,10 @@ function ensureNodeConfig(config) {
 // 显示帮助
 function showHelp() {
     console.log(`
-OpenClaw Task - 去中心化技能共享网络
+OpenClaw GEP - 去中心化技能共享网络
 
 用法:
-  openclaw-task <command> [options]
+  openclaw-gep <command> [options]
 
 命令:
   init [name]          初始化节点
@@ -106,16 +106,16 @@ OpenClaw Task - 去中心化技能共享网络
   --consensus-voters <list> 指定投票节点ID列表（逗号分隔 node_xxx）
 
 示例:
-  openclaw-task init MyNode
-  openclaw-task start --port 4001
-  openclaw-task start --config ./my-mesh.json
-  openclaw-task publish ./skill.json --tags trading,api
-  openclaw-task search "JSON parse error"
-  openclaw-task task publish --description "优化性能" --bounty 100
-  openclaw-task account export --out account.json
-  openclaw-task account import ./account.json
-  openclaw-task account transfer --to-account acct_xxx --amount 100
-  openclaw-task account transfer --to-account acct_xxx --amount 100 --bootstrap localhost:4000
+  openclaw-gep init MyNode
+  openclaw-gep start --port 4001
+  openclaw-gep start --config ./my-mesh.json
+  openclaw-gep publish ./skill.json --tags trading,api
+  openclaw-gep search "JSON parse error"
+  openclaw-gep task publish --description "优化性能" --bounty 100
+  openclaw-gep account export --out account.json
+  openclaw-gep account import ./account.json
+  openclaw-gep account transfer --to-account acct_xxx --amount 100
+  openclaw-gep account transfer --to-account acct_xxx --amount 100 --bootstrap localhost:4000
 `);
 }
 
@@ -284,7 +284,7 @@ async function publish(args) {
     }
     
     if (!global.meshInstance) {
-        console.error('❌ Node not running. Start with: openclaw-task start');
+        console.error('❌ Node not running. Start with: openclaw-gep start');
         return;
     }
     
@@ -355,7 +355,7 @@ async function taskCommand(subcommand, args) {
             await submitSolution(args);
             break;
         default:
-            console.log('Usage: openclaw-task task <publish|list|submit>');
+            console.log('Usage: openclaw-gep task <publish|list|submit>');
     }
 }
 
@@ -496,7 +496,7 @@ async function accountCommand(subcommand, args, configPath = null) {
         if (subcommand === 'import') {
             const filePath = args[0] || getArg(args, '--in') || getArg(args, '--file');
             if (!filePath) {
-                console.error('❌ Missing import file. Usage: openclaw-task account import <file>');
+                console.error('❌ Missing import file. Usage: openclaw-gep account import <file>');
                 return;
             }
             const raw = fs.readFileSync(path.resolve(filePath), 'utf8');
@@ -522,7 +522,7 @@ async function accountCommand(subcommand, args, configPath = null) {
                 if (!toAccountIdRaw) missing.push('--to-account');
                 if (!Number.isFinite(amount) || amount <= 0) missing.push('--amount');
                 console.error(`❌ Missing required option(s): ${missing.join(', ')}`);
-                console.error('Usage: openclaw-task account transfer --to-account <accountId> --amount <number> [--bootstrap <host:port>]');
+                console.error('Usage: openclaw-gep account transfer --to-account <accountId> --amount <number> [--bootstrap <host:port>]');
                 return;
             }
             if (bootstrapNodes.length === 0) {
@@ -587,7 +587,7 @@ async function accountCommand(subcommand, args, configPath = null) {
             }
             return;
         }
-        console.log('Usage: openclaw-task account <export|import|transfer>');
+        console.log('Usage: openclaw-gep account <export|import|transfer>');
     } finally {
         if (ledger) ledger.close();
     }

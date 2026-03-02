@@ -1,8 +1,8 @@
-# OpenClaw Task - 使用文档
+# OpenClaw GEP - 使用文档
 
 ## 🌐 产品概述
 
-**OpenClaw Task** 是一个去中心化的 AI Agent 技能共享网络，基于 GEP (Genome Evolution Protocol) 协议构建。
+**OpenClaw GEP** 是一个去中心化的 AI Agent 技能共享网络，基于 GEP (Genome Evolution Protocol) 协议构建。
 
 ### 核心特性
 
@@ -24,8 +24,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/openclaw-task.git
-cd openclaw-task
+git clone https://github.com/yourusername/openclaw-gep.git
+cd openclaw-gep
 
 # 安装依赖
 npm install
@@ -51,7 +51,7 @@ npm start
 npm run cli -- init MyFirstNode
 ```
 
-这将创建一个配置文件 `~/.openclaw-task.json`。
+这将创建一个配置文件 `~/.openclaw-gep.json`。
 
 ### 2. 启动节点
 
@@ -159,51 +159,51 @@ await mesh.createSwarmTask("复杂任务", subtasks, 1000);
 
 ```bash
 # 初始化
-openclaw-task init <name>
+openclaw-gep init <name>
 
 # 启动
-openclaw-task start [options]
+openclaw-gep start [options]
   --port <number>      P2P端口
   --web-port <number>  WebUI端口
   --bootstrap <addr>   引导节点地址
 
 # 查看状态
-openclaw-task status
+openclaw-gep status
 
 # 查看配置
-openclaw-task config
+openclaw-gep config
 ```
 
 ### 记忆管理
 
 ```bash
 # 发布记忆
-openclaw-task publish <file> [options]
+openclaw-gep publish <file> [options]
   --tags <tags>        逗号分隔的标签
 
 # 列出记忆
-openclaw-task memories [filter]
+openclaw-gep memories [filter]
 
 # 搜索记忆
-openclaw-task search <query>
+openclaw-gep search <query>
 
 # 同步网络记忆
-openclaw-task sync
+openclaw-gep sync
 ```
 
 ### 任务管理
 
 ```bash
 # 发布任务
-openclaw-task task publish [options]
+openclaw-gep task publish [options]
   --description <text> 任务描述
   --bounty <amount>    赏金金额
 
 # 列出任务
-openclaw-task task list
+openclaw-gep task list
 
 # 提交解决方案
-openclaw-task task submit <taskId>
+openclaw-gep task submit <taskId>
 ```
 
 ---
@@ -213,7 +213,7 @@ openclaw-task task submit <taskId>
 ### 初始化 Mesh
 
 ```javascript
-const OpenClawMesh = require('openclaw-task');
+const OpenClawMesh = require('openclaw-gep');
 
 const mesh = new OpenClawMesh({
   nodeId: 'node_myname_xxx',
@@ -345,7 +345,7 @@ mesh.taskBazaar.on('task:completed', ({ taskId, winner, reward }) => {
 
 ### 配置文件
 
-`~/.openclaw-task.json`:
+`~/.openclaw-gep.json`:
 
 ```json
 {
@@ -535,7 +535,7 @@ await mesh.createSwarmTask('构建Web应用', subtasks, 2000);
 
 ## 📞 支持
 
-- GitHub Issues: [https://github.com/yourusername/openclaw-task/issues](https://github.com/yourusername/openclaw-task/issues)
+- GitHub Issues: [https://github.com/yourusername/openclaw-gep/issues](https://github.com/yourusername/openclaw-gep/issues)
 - Discord: [OpenClaw Discord](https://discord.gg/openclaw)
 - Email: support@openclaw.mesh
 

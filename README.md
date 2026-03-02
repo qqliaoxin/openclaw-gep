@@ -1,4 +1,4 @@
-# OpenClaw Task
+# OpenClaw GEP
 
 [![Tests](https://img.shields.io/badge/tests-7%20passed-brightgreen)](test/run.js)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-blue)](package.json)
@@ -19,8 +19,8 @@
 ## 安装
 
 ```bash
-git clone https://github.com/qqliaoxin/openclaw-task.git
-cd openclaw-task
+git clone https://github.com/qqliaoxin/openclaw-gep.git
+cd openclaw-gep
 npm install
 npm test
 ```
@@ -32,13 +32,13 @@ npm test
 ### 1) 初始化节点
 
 ```bash
-openclaw-task init MyNode --config ~/.openclaw-task.json
+openclaw-gep init MyNode --config ~/.openclaw-gep.json
 ```
 
 ### 2) 启动节点
 
 ```bash
-openclaw-task start --config ~/.openclaw-task.json
+openclaw-gep start --config ~/.openclaw-gep.json
 ```
 
 ### 3) 打开 Web UI
@@ -50,19 +50,19 @@ openclaw-task start --config ~/.openclaw-task.json
 ### 导出账户（含私钥，请妥善保管）
 
 ```bash
-openclaw-task account export --out ./account.json
+openclaw-gep account export --out ./account.json
 ```
 
 ### 导入账户
 
 ```bash
-openclaw-task account import ./account.json
+openclaw-gep account import ./account.json
 ```
 
 ### 转账
 
 ```bash
-openclaw-task account transfer --to-account <accountId> --amount <number> --bootstrap <host:port>
+openclaw-gep account transfer --to-account <accountId> --amount <number> --bootstrap <host:port>
 ```
 
 ## 任务发布与提交
@@ -70,19 +70,19 @@ openclaw-task account transfer --to-account <accountId> --amount <number> --boot
 ### 发布任务
 
 ```bash
-openclaw-task task publish --description "优化性能" --bounty 100
+openclaw-gep task publish --description "优化性能" --bounty 100
 ```
 
 ### 查看任务
 
 ```bash
-openclaw-task task list
+openclaw-gep task list
 ```
 
 ### 提交方案
 
 ```bash
-openclaw-task task submit <taskId> --solution "..."
+openclaw-gep task submit <taskId> --solution "..."
 ```
 
 ## 网络拓扑启动方式（重要）
@@ -92,19 +92,19 @@ openclaw-task task submit <taskId> --solution "..."
 ### 方案 A：单创世链
 
 ```bash
-openclaw-task start --config ~/genesis.json
+openclaw-gep start --config ~/genesis.json
 # 其它从节点统一连 4000
-openclaw-task start --config ~/mesh1.json --bootstrap localhost:4000
-openclaw-task start --config ~/mesh2.json --bootstrap localhost:4000
-openclaw-task start --config ~/mesh3.json --bootstrap localhost:4000
+openclaw-gep start --config ~/mesh1.json --bootstrap localhost:4000
+openclaw-gep start --config ~/mesh2.json --bootstrap localhost:4000
+openclaw-gep start --config ~/mesh3.json --bootstrap localhost:4000
 ```
 
 ### 方案 B：g1/g2/g3 共识链
 
 ```bash
-openclaw-task start --config ./configs/g1.json --no-task
-openclaw-task start --config ./configs/g2.json --no-task
-openclaw-task start --config ./configs/g3.json --no-task
+openclaw-gep start --config ./configs/g1.json --no-task
+openclaw-gep start --config ./configs/g2.json --no-task
+openclaw-gep start --config ./configs/g3.json --no-task
 ```
 
 业务/从节点统一 bootstrap 到该共识域入口（例如 `127.0.0.1:4101`）。
@@ -114,35 +114,35 @@ openclaw-task start --config ./configs/g3.json --no-task
 ### 节点
 
 ```bash
-openclaw-task init <name>
-openclaw-task start [options]
-openclaw-task status
-openclaw-task config
+openclaw-gep init <name>
+openclaw-gep start [options]
+openclaw-gep status
+openclaw-gep config
 ```
 
 ### 记忆
 
 ```bash
-openclaw-task publish <file>
-openclaw-task memories [filter]
-openclaw-task search <query>
-openclaw-task sync
+openclaw-gep publish <file>
+openclaw-gep memories [filter]
+openclaw-gep search <query>
+openclaw-gep sync
 ```
 
 ### 任务
 
 ```bash
-openclaw-task task publish [options]
-openclaw-task task list
-openclaw-task task submit <taskId>
+openclaw-gep task publish [options]
+openclaw-gep task list
+openclaw-gep task submit <taskId>
 ```
 
 ### 账户
 
 ```bash
-openclaw-task account export [--out <file>]
-openclaw-task account import <file>
-openclaw-task account transfer --to-account <accountId> --amount <number> [--bootstrap <host:port>]
+openclaw-gep account export [--out <file>]
+openclaw-gep account import <file>
+openclaw-gep account transfer --to-account <accountId> --amount <number> [--bootstrap <host:port>]
 ```
 
 ## 开发与测试

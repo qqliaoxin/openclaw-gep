@@ -499,7 +499,7 @@ class WebUIServer {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenClaw Task Dashboard</title>
+    <title>OpenClaw GEP Dashboard</title>
     <style>
         * {
             margin: 0;
@@ -1106,7 +1106,7 @@ class WebUIServer {
         <header>
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <div>
-                    <h1>🌐 OpenClaw Task Dashboard</h1>
+                    <h1>🌐 OpenClaw GEP Dashboard</h1>
                     <p>Decentralized Skill Sharing Network</p>
                 </div>
                 <button class="lang-btn" onclick="toggleLang()">🇨🇳 中文</button>

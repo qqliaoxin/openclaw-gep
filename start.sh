@@ -1,9 +1,9 @@
 #!/bin/bash
-# OpenClaw Task 一键启动脚本
+# OpenClaw GEP 一键启动脚本
 
 set -e
 
-echo "🚀 OpenClaw Task 启动脚本"
+echo "🚀 OpenClaw GEP 启动脚本"
 echo "=========================="
 
 # 检查 Node.js
@@ -30,7 +30,7 @@ fi
 echo "✅ 依赖已安装"
 
 # 检查是否已初始化
-if [ ! -f "$HOME/.openclaw-task.json" ]; then
+if [ ! -f "$HOME/.openclaw-gep.json" ]; then
     echo "🔧 初始化节点..."
     node src/cli.js init "Node_$(hostname)"
 fi

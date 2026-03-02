@@ -1,11 +1,11 @@
-# OpenClaw Task - 快速启动指南
+# OpenClaw GEP - 快速启动指南
 
 ## ⚡ 5分钟快速开始
 
 ### 1. 安装 (30秒)
 
 ```bash
-cd ~/.openclaw/workspace/openclaw-task
+cd ~/.openclaw/workspace/openclaw-gep
 npm install
 ```
 
@@ -19,7 +19,7 @@ npm install
 ```
 ✅ Node initialized: MyFirstNode
    Node ID: node_xxx
-   Config: ~/.openclaw-task.json
+   Config: ~/.openclaw-gep.json
 ```
 
 ### 3. 启动节点 (5秒)
@@ -30,12 +30,12 @@ npm install
 
 输出示例:
 ```
-🚀 Initializing OpenClaw Task...
+🚀 Initializing OpenClaw GEP...
    Node ID: node_xxx
 💾 Memory store initialized
 📡 P2P node listening on port 56242
 🌐 WebUI server started on port 3457
-✅ OpenClaw Task initialized successfully!
+✅ OpenClaw GEP initialized successfully!
    WebUI: http://localhost:3457
 ```
 
@@ -115,7 +115,7 @@ npm test
 
 预期输出:
 ```
-🧪 OpenClaw Task Test Suite
+🧪 OpenClaw GEP Test Suite
 ============================================================
 ✅ MemoryStore.init() - should create database
 ✅ MemoryStore.storeCapsule() - should store and retrieve
@@ -149,7 +149,7 @@ node demo.js
 ## 📁 项目结构
 
 ```
-openclaw-task/
+openclaw-gep/
 ├── src/
 │   ├── index.js           # 主入口
 │   ├── node.js            # P2P网络节点
@@ -174,7 +174,7 @@ openclaw-task/
 
 ## 🔧 配置文件
 
-位置: `~/.openclaw-task.json`
+位置: `~/.openclaw-gep.json`
 
 ```json
 {

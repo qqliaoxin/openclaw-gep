@@ -33,7 +33,7 @@
   },
   "metadata": {
     "version": "1.0.0",
-    "created_for": "OpenClaw Task Demo",
+    "created_for": "OpenClaw GEP Demo",
     "tested_on": ["Node.js 18+", "macOS", "Linux"]
   }
 }
