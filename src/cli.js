@@ -104,6 +104,7 @@ OpenClaw GEP - 去中心化技能共享网络
   --advertise-host <host> 对外宣告本节点主机地址（跨机房推荐）
   --bootstrap-ledger    将本节点作为账本创世节点（仅首个记账主需要）
   --consensus-voters <list> 指定投票节点ID列表（逗号分隔 node_xxx）
+  --safe-dashboard      安全模式：Dashboard仅显示Account ID/Balance，并禁用Transfer API与命令
 
 示例:
   openclaw-gep init MyNode
@@ -176,6 +177,8 @@ async function init(args) {
 // 启动节点
 async function start(args, configPath = null) {
     const config = loadConfig(configPath);
+    const safeDashboard = args.includes('--safe-dashboard') || config.safeDashboard === true;
+    const transferDisabled = safeDashboard || config.transferDisabled === true;
     const cliGenesisNodes = parseAddressList(getArg(args, '--genesis-nodes', ''));
     const cliConsensusVoters = parseAddressList(getArg(args, '--consensus-voters', ''));
     const configGenesisNodes = Array.isArray(config.genesisNodes) ? config.genesisNodes : [];
@@ -196,13 +199,22 @@ async function start(args, configPath = null) {
         isGenesisNode: args.includes('--genesis') || config.isGenesisNode || false,
         bootstrapLedger: args.includes('--bootstrap-ledger') ? true : (config.bootstrapLedger === true ? true : undefined),
         genesisOperatorAccountId: config.genesisOperatorAccountId || null,
-        acceptTasks: !(args.includes('--no-task') || config.acceptTasks === false)
+        acceptTasks: !(args.includes('--no-task') || config.acceptTasks === false),
+        safeDashboard,
+        disableTransfer: transferDisabled
     };
     
     // 如果有bootstrap参数
     const bootstrap = getArg(args, '--bootstrap');
     if (bootstrap) {
         options.bootstrapNodes.push(bootstrap);
+    }
+
+    if (safeDashboard && (config.safeDashboard !== true || config.transferDisabled !== true)) {
+        config.safeDashboard = true;
+        config.transferDisabled = true;
+        saveConfig(config);
+        console.log('🔒 Safe dashboard mode enabled and saved to config (transfer disabled).');
     }
     
     const mesh = new OpenClawMesh(options);
@@ -507,6 +519,11 @@ async function accountCommand(subcommand, args, configPath = null) {
             return;
         }
         if (subcommand === 'transfer') {
+            if (config.transferDisabled === true || config.safeDashboard === true) {
+                console.error('❌ Transfer is disabled by safe dashboard mode.');
+                console.error('   Set "transferDisabled": false in config to re-enable explicitly.');
+                return;
+            }
             const wallet = loadOrCreateWallet(dataDir);
             ledger = new LedgerStore(dataDir);
             ledger.init({ isGenesis: isBootstrapLedger, genesisAccountId: wallet.accountId, genesisSupply: 1000000, genesisPublicKeyPem: wallet.publicKeyPem, genesisPrivateKeyPem: wallet.privateKeyPem });

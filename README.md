@@ -109,8 +109,12 @@ openclaw-gep start --config ./configs/g1.json --no-task
 openclaw-gep start --config ./configs/g2.json --no-task
 openclaw-gep start --config ./configs/g3.json --no-task
 ```
-
 业务/从节点统一 bootstrap 到该共识域入口（例如 `127.0.0.1:4101`）。
+### 安全模式启动：禁用 Transfer
+```bash
+openclaw-gep start --config ~/mesh1.json --safe-dashboard
+```
+开启后会写入配置 safeDashboard=true 和 transferDisabled=true，后续重启仍生效。
 
 ## CLI 速查
 

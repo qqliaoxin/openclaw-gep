@@ -376,3 +376,28 @@ http://localhost:3457/api/account/balance?accountId=acct_xxx
 - 业务节点统一 bootstrap 到 `g1`（如 `127.0.0.1:4101`）
 
 另外必须先清理旧分叉数据目录再重启，不然历史不会自动合并。
+已按你这两个要求完成改造。
+
+1. `Bounty (CLAW)` 默认不可编辑，且全自动计算  
+- 已将输入框改为只读：[`web/server.js:1287`](/Users/vector/.openclaw/workspace/openclaw-mesh/web/server.js:1287)  
+- 自动计算规则仍是：`Math.max(1, Math.ceil(字符数 / 100))`  
+  - 前端计算：[`web/server.js:1804`](/Users/vector/.openclaw/workspace/openclaw-mesh/web/server.js:1804)  
+  - 后端兜底（防绕过前端）：[`web/server.js:257`](/Users/vector/.openclaw/workspace/openclaw-mesh/web/server.js:257)
+
+2. 新增启动参数，Dashboard 切换到仅显示账户信息，并禁用 Transfer  
+- 新参数：`--safe-dashboard`（已写入 help）  
+  - [`src/cli.js:107`](/Users/vector/.openclaw/workspace/openclaw-mesh/src/cli.js:107)
+- 启动后 Dashboard 会隐藏原 Account 页面，改为新页面仅显示 `Account ID` + `Balance`  
+  - [`web/server.js:1213`](/Users/vector/.openclaw/workspace/openclaw-mesh/web/server.js:1213)  
+  - [`web/server.js:1331`](/Users/vector/.openclaw/workspace/openclaw-mesh/web/server.js:1331)
+- Transfer API 已禁用（返回 403）  
+  - [`web/server.js:353`](/Users/vector/.openclaw/workspace/openclaw-mesh/web/server.js:353)
+- CLI `account transfer` 命令也会被禁用  
+  - [`src/cli.js:522`](/Users/vector/.openclaw/workspace/openclaw-mesh/src/cli.js:522)
+
+使用方式：
+```bash
+openclaw-gep start --safe-dashboard
+```
+
+补充：我做了持久化，开启后会写入配置 `safeDashboard=true` 和 `transferDisabled=true`，后续重启仍生效。

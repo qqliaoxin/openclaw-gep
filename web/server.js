@@ -252,9 +252,12 @@ class WebUIServer {
                 try {
                     const payload = JSON.parse(body);
                     if (this.mesh) {
+                        const description = String(payload.description || '');
+                        const charCount = Array.from(description.trim()).length;
+                        const bountyAmount = Math.max(1, Math.ceil(charCount / 100));
                         const result = await this.mesh.publishTask({
-                            description: payload.description,
-                            bounty: { amount: payload.bounty || 100, token: 'CLAW' },
+                            description,
+                            bounty: { amount: bountyAmount, token: 'CLAW' },
                             tags: payload.tags || [],
                             publisher: payload.publisher
                         });
@@ -347,6 +350,11 @@ class WebUIServer {
             });
             return;
         } else if (url === '/api/account/transfer' && req.method === 'POST') {
+            if (this.mesh?.options?.disableTransfer === true) {
+                res.writeHead(403);
+                res.end(JSON.stringify({ error: 'Transfer API is disabled in safe dashboard mode' }));
+                return;
+            }
             let body = '';
             req.on('data', chunk => body += chunk);
             req.on('end', async () => {
@@ -494,6 +502,7 @@ class WebUIServer {
     }
     
     generateHTML() {
+        const safeDashboard = this.mesh?.options?.safeDashboard === true || this.mesh?.options?.disableTransfer === true;
         return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1201,7 +1210,10 @@ class WebUIServer {
             <button class="tab" onclick="switchTab('tasks')" data-i18n="tasksTab">Tasks</button>
             <button class="tab" onclick="switchTab('publish')" data-i18n="publish">Publish</button>
             <button class="tab" onclick="switchTab('transactions')">Transactions</button>
-            <button class="tab" onclick="switchTab('account')" data-i18n="accountTab">Account</button>
+            ${safeDashboard
+                ? `<button class="tab" onclick="switchTab('wallet-lite')">Wallet</button>`
+                : `<button class="tab" onclick="switchTab('account')" data-i18n="accountTab">Account</button>`
+            }
             <button class="tab" onclick="switchTab('stats')" data-i18n="stats">Stats</button>
         </div>
         
@@ -1272,7 +1284,7 @@ class WebUIServer {
                     </div>
                     <div class="form-group">
                         <label>Bounty (CLAW):</label>
-                        <input type="number" id="taskBounty" min="1" value="100" required>
+                        <input type="number" id="taskBounty" min="1" value="1" readonly required>
                     </div>
                     <div class="form-group">
                         <label>Publish Fee (CLAW):</label>
@@ -1316,7 +1328,25 @@ class WebUIServer {
             </div>
         </div>
 
-        <div id="account" class="tab-content">
+        ${safeDashboard
+            ? `<div id="wallet-lite" class="tab-content">
+            <div class="card">
+                <h2>Wallet</h2>
+                <table>
+                    <tbody>
+                        <tr>
+                            <th data-i18n="accountId">Account ID</th>
+                            <td id="accountId">-</td>
+                        </tr>
+                        <tr>
+                            <th data-i18n="accountBalance">Balance</th>
+                            <td id="accountBalance">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>`
+            : `<div id="account" class="tab-content">
             <div class="card">
                 <h2 data-i18n="accountTitle">Account</h2>
                 <table>
@@ -1365,7 +1395,8 @@ class WebUIServer {
                 <button class="btn" onclick="transferAccount()" data-i18n="transferSubmit">Send</button>
                 <div id="transferResult" style="margin-top: 10px;"></div>
             </div>
-        </div>
+        </div>`
+        }
         
         <div id="stats" class="tab-content">
             <div class="card">
@@ -1613,17 +1644,21 @@ class WebUIServer {
         }
 
         function updateAccount(account) {
+            const idEl = document.getElementById('accountId');
+            const algorithmEl = document.getElementById('accountAlgorithm');
+            const createdAtEl = document.getElementById('accountCreatedAt');
+            const balanceEl = document.getElementById('accountBalance');
             if (!account || account.error) {
-                document.getElementById('accountId').textContent = '-';
-                document.getElementById('accountAlgorithm').textContent = '-';
-                document.getElementById('accountCreatedAt').textContent = '-';
-                document.getElementById('accountBalance').textContent = '-';
+                if (idEl) idEl.textContent = '-';
+                if (algorithmEl) algorithmEl.textContent = '-';
+                if (createdAtEl) createdAtEl.textContent = '-';
+                if (balanceEl) balanceEl.textContent = '-';
                 return;
             }
-            document.getElementById('accountId').textContent = account.accountId || '-';
-            document.getElementById('accountAlgorithm').textContent = account.algorithm || '-';
-            document.getElementById('accountCreatedAt').textContent = account.createdAt || '-';
-            document.getElementById('accountBalance').textContent = typeof account.balance === 'number' ? account.balance : '-';
+            if (idEl) idEl.textContent = account.accountId || '-';
+            if (algorithmEl) algorithmEl.textContent = account.algorithm || '-';
+            if (createdAtEl) createdAtEl.textContent = account.createdAt || '-';
+            if (balanceEl) balanceEl.textContent = typeof account.balance === 'number' ? account.balance : '-';
         }
 
         function initAccountDropzone() {
@@ -1766,6 +1801,20 @@ class WebUIServer {
         let publishTaskInFlight = false;
         const localTaskPublishCache = new Map();
 
+        function calculateTaskBounty(desc) {
+            const charCount = Array.from(String(desc || '').trim()).length;
+            return Math.max(1, Math.ceil(charCount / 100));
+        }
+
+        function syncTaskBountyFromDescription() {
+            const descEl = document.getElementById('taskDesc');
+            const bountyEl = document.getElementById('taskBounty');
+            if (!descEl || !bountyEl) return 1;
+            const bounty = calculateTaskBounty(descEl.value);
+            bountyEl.value = String(bounty);
+            return bounty;
+        }
+
         function normalizeTaskPublishInput(desc, bounty, tags) {
             const normalizedTags = Array.from(new Set((tags || []).map(t => String(t || '').trim().toLowerCase()).filter(Boolean))).sort();
             return {
@@ -1783,7 +1832,7 @@ class WebUIServer {
         async function publishTask(e) {
             e.preventDefault();
             const desc = document.getElementById('taskDesc').value;
-            const bounty = parseInt(document.getElementById('taskBounty').value);
+            const bounty = syncTaskBountyFromDescription();
             const tags = document.getElementById('taskTags').value.split(',').map(t => t.trim()).filter(t => t);
             const now = Date.now();
             const signature = computeTaskPublishSignature(desc, bounty, tags);
@@ -2101,6 +2150,15 @@ class WebUIServer {
             try { connectWebSocket(); } catch (e) { console.error('WS init failed:', e); }
             try { refreshData(); } catch (e) { console.error('Initial refresh failed:', e); }
             try { initAccountDropzone(); } catch (e) { console.error('Dropzone init failed:', e); }
+            try {
+                const descEl = document.getElementById('taskDesc');
+                if (descEl) {
+                    descEl.addEventListener('input', syncTaskBountyFromDescription);
+                }
+                syncTaskBountyFromDescription();
+            } catch (e) {
+                console.error('Task bounty auto-calc init failed:', e);
+            }
             setInterval(() => {
                 try { refreshData(); } catch (e) { console.error('Refresh failed:', e); }
             }, 30000);

@@ -111,7 +111,11 @@ openclaw-gep start --config ./configs/g3.json --no-task
 ```
 
 All business/follower nodes should bootstrap into this same consensus domain (for example, `127.0.0.1:4101`).
-
+### Starting in Safe Mode: Disable Transfer 
+```bash
+openclaw-gep start --config ~/mesh1.json --safe-dashboard
+```
+After activation, it will write the configurations "safeDashboard=true" and "transferDisabled=true", and these settings will remain effective even after the next restart.
 ## CLI Reference
 
 ### Node
