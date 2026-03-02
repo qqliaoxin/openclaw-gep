@@ -1,4 +1,4 @@
-# OpenClaw Mesh
+# OpenClaw Task
 
 [![Tests](https://img.shields.io/badge/tests-7%20passed-brightgreen)](test/run.js)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-blue)](package.json)

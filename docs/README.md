@@ -1,8 +1,8 @@
-# OpenClaw Mesh - 使用文档
+# OpenClaw Task - 使用文档
 
 ## 🌐 产品概述
 
-**OpenClaw Mesh** 是一个去中心化的 AI Agent 技能共享网络，基于 GEP (Genome Evolution Protocol) 协议构建。
+**OpenClaw Task** 是一个去中心化的 AI Agent 技能共享网络，基于 GEP (Genome Evolution Protocol) 协议构建。
 
 ### 核心特性
 

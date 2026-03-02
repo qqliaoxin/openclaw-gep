@@ -1,5 +1,5 @@
 /**
- * OpenClaw Mesh - 去中心化技能共享网络
+ * OpenClaw Task - 去中心化技能共享网络
  * Main Entry Point
  */
 
@@ -234,7 +234,7 @@ class OpenClawMesh {
     }
     
     async init() {
-        console.log(`🚀 Initializing OpenClaw Mesh...`);
+        console.log(`🚀 Initializing OpenClaw Task...`);
         console.log(`   Node ID: ${this.options.nodeId}`);
         
         // 初始化存储
@@ -309,7 +309,7 @@ class OpenClawMesh {
         this.startRaftConsensus();
         
         this.initialized = true;
-        console.log(`✅ OpenClaw Mesh initialized successfully!`);
+        console.log(`✅ OpenClaw Task initialized successfully!`);
         console.log(`   WebUI: http://localhost:${this.options.webPort}`);
         
         return this;
@@ -1472,7 +1472,7 @@ class OpenClawMesh {
     
     // 关闭
     async stop() {
-        console.log('👋 Stopping OpenClaw Mesh...');
+        console.log('👋 Stopping OpenClaw Task...');
         
         if (this.webUI) {
             await this.webUI.stop();
@@ -1516,7 +1516,7 @@ class OpenClawMesh {
         this.persistConsensusState(true);
         await this.flushConsensusState();
         
-        console.log('✅ OpenClaw Mesh stopped');
+        console.log('✅ OpenClaw Task stopped');
     }
 }
 

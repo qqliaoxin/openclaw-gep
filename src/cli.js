@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OpenClaw Mesh CLI
+ * OpenClaw Task CLI
  * 命令行接口
  */
 
@@ -68,7 +68,7 @@ function ensureNodeConfig(config) {
 // 显示帮助
 function showHelp() {
     console.log(`
-OpenClaw Mesh - 去中心化技能共享网络
+OpenClaw Task - 去中心化技能共享网络
 
 用法:
   openclaw-task <command> [options]

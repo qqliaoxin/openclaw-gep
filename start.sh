@@ -1,9 +1,9 @@
 #!/bin/bash
-# OpenClaw Mesh 一键启动脚本
+# OpenClaw Task 一键启动脚本
 
 set -e
 
-echo "🚀 OpenClaw Mesh 启动脚本"
+echo "🚀 OpenClaw Task 启动脚本"
 echo "=========================="
 
 # 检查 Node.js

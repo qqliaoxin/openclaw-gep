@@ -1,4 +1,4 @@
-# OpenClaw Mesh - 项目完成总结
+# OpenClaw Task - 项目完成总结
 
 ## ✅ 已完成的核心功能
 
@@ -49,7 +49,7 @@
 ## 📊 测试结果
 
 ```
-🧪 OpenClaw Mesh Test Suite
+🧪 OpenClaw Task Test Suite
 ============================================================
 ✅ MemoryStore.init() - should create database
 ✅ MemoryStore.storeCapsule() - should store and retrieve  

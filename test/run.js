@@ -1,5 +1,5 @@
 /**
- * OpenClaw Mesh 测试套件
+ * OpenClaw Task 测试套件
  */
 
 const OpenClawMesh = require('../src/index');
@@ -28,7 +28,7 @@ class TestRunner {
     }
     
     async run() {
-        console.log('\n🧪 OpenClaw Mesh Test Suite\n');
+        console.log('\n🧪 OpenClaw Task Test Suite\n');
         console.log('='.repeat(60));
         
         for (const { name, fn } of this.tests) {

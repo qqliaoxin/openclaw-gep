@@ -1,4 +1,4 @@
-# OpenClaw Mesh - 快速启动指南
+# OpenClaw Task - 快速启动指南
 
 ## ⚡ 5分钟快速开始
 
@@ -30,12 +30,12 @@ npm install
 
 输出示例:
 ```
-🚀 Initializing OpenClaw Mesh...
+🚀 Initializing OpenClaw Task...
    Node ID: node_xxx
 💾 Memory store initialized
 📡 P2P node listening on port 56242
 🌐 WebUI server started on port 3457
-✅ OpenClaw Mesh initialized successfully!
+✅ OpenClaw Task initialized successfully!
    WebUI: http://localhost:3457
 ```
 
@@ -115,7 +115,7 @@ npm test
 
 预期输出:
 ```
-🧪 OpenClaw Mesh Test Suite
+🧪 OpenClaw Task Test Suite
 ============================================================
 ✅ MemoryStore.init() - should create database
 ✅ MemoryStore.storeCapsule() - should store and retrieve
