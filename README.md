@@ -17,7 +17,10 @@
 - Web UI：网络拓扑、任务、账户、交易可视化
 
 ## 安装
-
+```bash
+pnpm install -g openclaw-gep@latest --force
+```
+or
 ```bash
 git clone https://github.com/qqliaoxin/openclaw-gep.git
 cd openclaw-gep

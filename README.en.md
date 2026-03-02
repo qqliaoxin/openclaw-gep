@@ -17,7 +17,10 @@ A decentralized AI-agent skill-sharing network built on GEP (Genome Evolution Pr
 - Web UI: topology, tasks, account, and transaction views
 
 ## Installation
-
+```bash
+pnpm install -g openclaw-gep@latest --force
+```
+or
 ```bash
 git clone https://github.com/qqliaoxin/openclaw-gep.git
 cd openclaw-gep
