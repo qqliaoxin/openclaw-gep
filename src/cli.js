@@ -31,6 +31,14 @@ function getArg(args, key, defaultVal = null) {
     return defaultVal;
 }
 
+function parseAddressList(value) {
+    if (!value || typeof value !== 'string') return [];
+    return value
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+}
+
 // 加载配置
 function loadConfig(configPath = null) {
     const file = configPath || CONFIG_FILE;
@@ -91,6 +99,11 @@ OpenClaw Mesh - 去中心化技能共享网络
   --tags <tags>        设置标签（逗号分隔）
   --master <url>       设置主节点URL
   --genesis            标记为主节点
+  --no-task            不接任务（仅关闭抢单/执行，其他功能正常）
+  --genesis-nodes <list> 指定主节点列表（逗号分隔 host:port）
+  --advertise-host <host> 对外宣告本节点主机地址（跨机房推荐）
+  --bootstrap-ledger    将本节点作为账本创世节点（仅首个记账主需要）
+  --consensus-voters <list> 指定投票节点ID列表（逗号分隔 node_xxx）
 
 示例:
   openclaw-mesh init MyNode
@@ -163,16 +176,27 @@ async function init(args) {
 // 启动节点
 async function start(args, configPath = null) {
     const config = loadConfig(configPath);
+    const cliGenesisNodes = parseAddressList(getArg(args, '--genesis-nodes', ''));
+    const cliConsensusVoters = parseAddressList(getArg(args, '--consensus-voters', ''));
+    const configGenesisNodes = Array.isArray(config.genesisNodes) ? config.genesisNodes : [];
+    const mergedGenesisNodes = Array.from(new Set([...configGenesisNodes, ...cliGenesisNodes]));
+    const configConsensusVoters = Array.isArray(config.consensusVoterIds) ? config.consensusVoterIds : [];
+    const mergedConsensusVoters = Array.from(new Set([...configConsensusVoters, ...cliConsensusVoters]));
     
     const options = {
         nodeId: config.nodeId,
         port: getArg(args, '--port') || config.port || 0,
         webPort: getArg(args, '--web-port') || config.webPort || 3457,
         bootstrapNodes: config.bootstrapNodes || [],
+        genesisNodes: mergedGenesisNodes,
+        consensusVoterIds: mergedConsensusVoters,
         dataDir: config.dataDir || './data',
         masterUrl: getArg(args, '--master') || config.masterUrl || null,
+        advertiseHost: getArg(args, '--advertise-host') || config.advertiseHost || null,
         isGenesisNode: args.includes('--genesis') || config.isGenesisNode || false,
-        genesisOperatorAccountId: config.genesisOperatorAccountId || null
+        bootstrapLedger: args.includes('--bootstrap-ledger') ? true : (config.bootstrapLedger === true ? true : undefined),
+        genesisOperatorAccountId: config.genesisOperatorAccountId || null,
+        acceptTasks: !(args.includes('--no-task') || config.acceptTasks === false)
     };
     
     // 如果有bootstrap参数
@@ -435,10 +459,11 @@ async function config() {
 async function accountCommand(subcommand, args, configPath = null) {
     const config = ensureNodeConfig(loadConfig(configPath));
     const dataDir = config.dataDir || './data';
+    let ledger = null;
     try {
         if (subcommand === 'export') {
             const wallet = loadOrCreateWallet(dataDir);
-            const ledger = new LedgerStore(dataDir);
+            ledger = new LedgerStore(dataDir);
             ledger.init({ isGenesis: config.isGenesisNode || false, genesisAccountId: wallet.accountId, genesisSupply: 1000000, genesisPublicKeyPem: wallet.publicKeyPem, genesisPrivateKeyPem: wallet.privateKeyPem });
             const payload = {
                 version: 2,
@@ -475,7 +500,7 @@ async function accountCommand(subcommand, args, configPath = null) {
         }
         if (subcommand === 'transfer') {
             const wallet = loadOrCreateWallet(dataDir);
-            const ledger = new LedgerStore(dataDir);
+            ledger = new LedgerStore(dataDir);
             ledger.init({ isGenesis: config.isGenesisNode || false, genesisAccountId: wallet.accountId, genesisSupply: 1000000, genesisPublicKeyPem: wallet.publicKeyPem, genesisPrivateKeyPem: wallet.privateKeyPem });
             const toAccountIdRaw = getArg(args, '--to-account') || getArg(args, '--to');
             const amount = Number(getArg(args, '--amount'));
@@ -534,7 +559,7 @@ async function accountCommand(subcommand, args, configPath = null) {
         }
         console.log('Usage: openclaw-mesh account <export|import|transfer>');
     } finally {
-        ledger.close();
+        if (ledger) ledger.close();
     }
 }
 

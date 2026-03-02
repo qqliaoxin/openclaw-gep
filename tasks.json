@@ -1,0 +1,106 @@
+[
+  {
+    "description": "Test task",
+    "type": "code",
+    "bounty": {
+      "amount": 100,
+      "token": "CLAW"
+    },
+    "taskId": "task_3ae7c32a94e4bee7",
+    "publisher": "node_test",
+    "escrowAccountId": "escrow_ae328f2adf2bfe53c98def9c",
+    "status": "open",
+    "submissions": []
+  },
+  {
+    "description": "Test task",
+    "type": "code",
+    "bounty": {
+      "amount": 100,
+      "token": "CLAW"
+    },
+    "taskId": "task_8e3d3387658908e7",
+    "publisher": "node_test",
+    "escrowAccountId": "escrow_a9d65f048fce1f383148750a",
+    "status": "open",
+    "submissions": []
+  },
+  {
+    "description": "Test task",
+    "type": "code",
+    "bounty": {
+      "amount": 100,
+      "token": "CLAW"
+    },
+    "taskId": "task_4a0dbbf23a26aeac",
+    "publisher": "node_test",
+    "escrowAccountId": "escrow_3aa8ffd26183fc83ff3e1657",
+    "status": "open",
+    "submissions": []
+  },
+  {
+    "description": "Test task",
+    "type": "code",
+    "bounty": {
+      "amount": 100,
+      "token": "CLAW"
+    },
+    "taskId": "task_cc8d5e3614686efc",
+    "publisher": "node_test",
+    "escrowAccountId": "escrow_f66751b5ea52615d5f0851dc",
+    "status": "open",
+    "submissions": []
+  },
+  {
+    "description": "Test task",
+    "type": "code",
+    "bounty": {
+      "amount": 100,
+      "token": "CLAW"
+    },
+    "taskId": "task_8f5e179d00140d2a",
+    "publisher": "node_test",
+    "escrowAccountId": "escrow_5882cce7a4c5db5304cdb057",
+    "status": "open",
+    "submissions": []
+  },
+  {
+    "description": "Test task",
+    "type": "code",
+    "bounty": {
+      "amount": 100,
+      "token": "CLAW"
+    },
+    "taskId": "task_cee74336f62c69f1",
+    "publisher": "node_test",
+    "escrowAccountId": "escrow_5dcdf429b5b77144012bc110",
+    "status": "open",
+    "submissions": []
+  },
+  {
+    "description": "Test task",
+    "type": "code",
+    "bounty": {
+      "amount": 100,
+      "token": "CLAW"
+    },
+    "taskId": "task_9b1bfa7f52ac43ea",
+    "publisher": "node_test",
+    "escrowAccountId": "escrow_170145a33f8a9edc33d935fa",
+    "status": "open",
+    "submissions": []
+  },
+  {
+    "description": "Test task",
+    "type": "code",
+    "bounty": {
+      "amount": 100,
+      "token": "CLAW"
+    },
+    "taskId": "task_a6ae0f634c24f0e6",
+    "publisher": "node_test",
+    "escrowAccountId": "escrow_362c5819710a7880b4706ba3",
+    "status": "open",
+    "submissions": []
+  }
+]

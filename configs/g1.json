@@ -1,0 +1,21 @@
+{
+  "name": "Genesis-G1",
+  "nodeId": "node_g1",
+  "port": 4101,
+  "webPort": 3501,
+  "dataDir": "./data-g1",
+  "isGenesisNode": true,
+  "bootstrapLedger": true,
+  "acceptTasks": false,
+  "advertiseHost": "127.0.0.1",
+  "genesisNodes": [
+    "127.0.0.1:4101",
+    "127.0.0.1:4102",
+    "127.0.0.1:4103"
+  ],
+  "consensusVoterIds": [
+    "node_g1",
+    "node_g2",
+    "node_g3"
+  ]
+}

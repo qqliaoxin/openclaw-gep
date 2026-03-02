@@ -1,0 +1,20 @@
+{
+  "name": "Genesis-G2",
+  "nodeId": "node_g2",
+  "port": 4102,
+  "webPort": 3502,
+  "dataDir": "./data-g2",
+  "isGenesisNode": true,
+  "acceptTasks": false,
+  "advertiseHost": "127.0.0.1",
+  "genesisNodes": [
+    "127.0.0.1:4101",
+    "127.0.0.1:4102",
+    "127.0.0.1:4103"
+  ],
+  "consensusVoterIds": [
+    "node_g1",
+    "node_g2",
+    "node_g3"
+  ]
+}

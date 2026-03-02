@@ -13,8 +13,11 @@ class MeshNode extends EventEmitter {
         this.nodeId = options.nodeId;
         this.port = options.port || 0;
         this.bootstrapNodes = options.bootstrapNodes || [];
+        this.isGenesisNode = !!options.isGenesisNode;
+        this.advertiseHost = options.advertiseHost || null;
         
         this.peers = new Map(); // peerId -> socket
+        this.peerMeta = new Map(); // peerId -> { address, port, isGenesisNode, lastSeen }
         this.server = null;
         this.messageHandlers = new Map();
         this.seenMessages = new Map();
@@ -26,6 +29,9 @@ class MeshNode extends EventEmitter {
         this.taskFanout = options.taskFanout || 8;
         this.defaultHops = options.defaultHops || 3;
         this.taskHops = options.taskHops || 4;
+        this.routeSyncTimer = null;
+        this.routeConnectBackoffMs = options.routeConnectBackoffMs || 30000;
+        this.routeConnectAttempts = new Map(); // address -> nextAllowedAt
         
         this.setupMessageHandlers();
     }
@@ -133,6 +139,52 @@ class MeshNode extends EventEmitter {
         this.messageHandlers.set('ledger_head_response', (message, peerId) => {
             this.emit('ledger:head_response', message.payload, peerId);
         });
+
+        // 处理主节点路由同步
+        this.messageHandlers.set('route_sync', (message, peerId) => {
+            this.handleRouteSync(message.payload, peerId);
+            this.emit('route:sync', message.payload, peerId);
+        });
+
+        // 选举: 请求投票
+        this.messageHandlers.set('leader_vote_request', (message, peerId) => {
+            this.emit('leader:vote_request', message.payload, peerId);
+        });
+
+        // 选举: 投票响应
+        this.messageHandlers.set('leader_vote_response', (message, peerId) => {
+            this.emit('leader:vote_response', message.payload, peerId);
+        });
+
+        // 选举: Leader 心跳
+        this.messageHandlers.set('leader_heartbeat', (message, peerId) => {
+            this.emit('leader:heartbeat', message.payload, peerId);
+        });
+
+        // 选举: Leader 宣告
+        this.messageHandlers.set('leader_announce', (message, peerId) => {
+            this.emit('leader:announce', message.payload, peerId);
+        });
+
+        // Raft: RequestVote
+        this.messageHandlers.set('raft_request_vote', (message, peerId) => {
+            this.emit('raft:request_vote', message.payload, peerId);
+        });
+
+        // Raft: RequestVoteResponse
+        this.messageHandlers.set('raft_request_vote_response', (message, peerId) => {
+            this.emit('raft:request_vote_response', message.payload, peerId);
+        });
+
+        // Raft: AppendEntries / heartbeat
+        this.messageHandlers.set('raft_append_entries', (message, peerId) => {
+            this.emit('raft:append_entries', message.payload, peerId);
+        });
+
+        // Raft: AppendEntriesResponse
+        this.messageHandlers.set('raft_append_entries_response', (message, peerId) => {
+            this.emit('raft:append_entries_response', message.payload, peerId);
+        });
     }
     
     async init() {
@@ -152,6 +204,7 @@ class MeshNode extends EventEmitter {
                 
                 // 启动心跳
                 this.startHeartbeat();
+                this.startRouteSync();
                 
                 resolve();
             });
@@ -187,6 +240,7 @@ class MeshNode extends EventEmitter {
                                 this.peers.set(peerId, socket);
                                 console.log(`✅ handshake mapped socket for ${peerId} (inbound)`);
                             }
+                            this.updatePeerMeta(peerId, socket, message);
                         }
                         this.handleMessage(message, peerId || remoteKey);
                     } catch (e) {
@@ -199,6 +253,7 @@ class MeshNode extends EventEmitter {
         socket.on('close', () => {
             if (peerId) {
                 this.peers.delete(peerId);
+                this.peerMeta.delete(peerId);
                 this.emit('peer:disconnected', peerId);
             }
             // Also remove by remote key
@@ -232,18 +287,25 @@ class MeshNode extends EventEmitter {
                     }
                     this.peers.delete(oldKey);
                     this.peers.set(peerId, socket);
+                    this.updatePeerMeta(peerId, socket, message);
                     
                     // Send handshake back for bidirectional connection (only if not already sent)
                     if (!oldKey.includes(this.nodeId)) {
                         this.send(socket, {
                             type: 'handshake',
                             nodeId: this.nodeId,
-                            port: this.port
+                            port: this.port,
+                            isGenesisNode: this.isGenesisNode,
+                            host: this.advertiseHost
                         });
                     }
                 }
             } else {
                 peerId = message.nodeId;
+                const socket = this.peers.get(peerId);
+                if (socket) {
+                    this.updatePeerMeta(peerId, socket, message);
+                }
             }
             const mapped = this.peers.get(peerId);
             if (!mapped) {
@@ -309,7 +371,9 @@ class MeshNode extends EventEmitter {
                 this.send(socket, {
                     type: 'handshake',
                     nodeId: this.nodeId,
-                    port: this.port
+                    port: this.port,
+                    isGenesisNode: this.isGenesisNode,
+                    host: this.advertiseHost
                 });
                 
                 console.log(`🔗 Connected to peer: ${address}`);
@@ -333,6 +397,7 @@ class MeshNode extends EventEmitter {
                                 this.peers.delete(address);
                                 this.peers.set(message.nodeId, socket);
                                 console.log(`🔄 Mapped peer: ${message.nodeId}`);
+                                this.updatePeerMeta(message.nodeId, socket, message, host);
                             }
                             this.handleMessage(message, message.nodeId || address);
                         } catch (e) {
@@ -346,6 +411,11 @@ class MeshNode extends EventEmitter {
             
             socket.on('close', () => {
                 this.peers.delete(address);
+                for (const [peerId, meta] of this.peerMeta.entries()) {
+                    if (meta && meta.address === address) {
+                        this.peerMeta.delete(peerId);
+                    }
+                }
             });
         });
     }
@@ -495,6 +565,95 @@ class MeshNode extends EventEmitter {
             }
         }, 30000); // 每30秒发送一次心跳
     }
+
+    startRouteSync() {
+        if (this.routeSyncTimer) {
+            clearInterval(this.routeSyncTimer);
+        }
+        const tick = () => {
+            if (!this.isGenesisNode) return;
+            const routes = this.getKnownGenesisRoutes();
+            if (routes.length === 0) return;
+            this.broadcastAll({
+                type: 'route_sync',
+                payload: { routes, source: this.nodeId },
+                timestamp: Date.now()
+            }, { hopsLeft: this.defaultHops });
+        };
+        setTimeout(tick, 2000);
+        this.routeSyncTimer = setInterval(tick, 15000);
+    }
+
+    updatePeerMeta(peerId, socket, handshake = {}, fallbackHost = null) {
+        if (!peerId || !socket) return;
+        const rawHost = handshake?.host || fallbackHost || socket.remoteAddress || '';
+        const host = String(rawHost).replace('::ffff:', '') || '127.0.0.1';
+        const announcedPort = Number(handshake?.port);
+        const port = Number.isFinite(announcedPort) && announcedPort > 0 ? announcedPort : null;
+        const address = port ? `${host}:${port}` : null;
+        const current = this.peerMeta.get(peerId) || {};
+        this.peerMeta.set(peerId, {
+            ...current,
+            address: address || current.address || null,
+            port: port || current.port || null,
+            isGenesisNode: handshake?.isGenesisNode === true || current.isGenesisNode === true,
+            lastSeen: Date.now()
+        });
+    }
+
+    getKnownGenesisRoutes() {
+        const routes = [];
+        if (this.isGenesisNode && this.port && this.advertiseHost) {
+            routes.push({
+                nodeId: this.nodeId,
+                address: `${this.advertiseHost}:${this.port}`,
+                isGenesisNode: true
+            });
+        }
+        for (const [peerId, meta] of this.peerMeta.entries()) {
+            if (!meta?.isGenesisNode || !meta?.address) continue;
+            routes.push({
+                nodeId: peerId,
+                address: meta.address,
+                isGenesisNode: true
+            });
+        }
+        const unique = new Map();
+        for (const route of routes) {
+            if (!route.address) continue;
+            unique.set(route.address, route);
+        }
+        return Array.from(unique.values());
+    }
+
+    handleRouteSync(payload, fromPeerId) {
+        const routes = Array.isArray(payload?.routes) ? payload.routes : [];
+        if (routes.length === 0) return;
+        const now = Date.now();
+        for (const route of routes) {
+            const nodeId = route?.nodeId;
+            const address = route?.address;
+            if (!address || typeof address !== 'string') continue;
+            if (nodeId && nodeId === this.nodeId) continue;
+            if (!route?.isGenesisNode) continue;
+            if (nodeId && this.peers.has(nodeId)) continue;
+            if (this.peers.has(address)) continue;
+            const nextAllowedAt = this.routeConnectAttempts.get(address) || 0;
+            if (now < nextAllowedAt) continue;
+            this.routeConnectAttempts.set(address, now + this.routeConnectBackoffMs);
+            this.connectToPeer(address).catch(() => {});
+        }
+        if (fromPeerId && this.isGenesisNode) {
+            const myRoutes = this.getKnownGenesisRoutes();
+            if (myRoutes.length > 0) {
+                this.sendToPeer(fromPeerId, {
+                    type: 'route_sync',
+                    payload: { routes: myRoutes, source: this.nodeId },
+                    timestamp: Date.now()
+                });
+            }
+        }
+    }
     
     getPeers() {
         const peers = [];
@@ -507,6 +666,17 @@ class MeshNode extends EventEmitter {
             });
         }
         return peers;
+    }
+
+    getGenesisPeerIds() {
+        const ids = [];
+        for (const [peerId, meta] of this.peerMeta.entries()) {
+            if (!peerId || !String(peerId).startsWith('node_')) continue;
+            if (meta?.isGenesisNode) {
+                ids.push(peerId);
+            }
+        }
+        return ids;
     }
 
     ensureMessageId(message) {
@@ -593,11 +763,16 @@ class MeshNode extends EventEmitter {
     }
     
     async stop() {
+        if (this.routeSyncTimer) {
+            clearInterval(this.routeSyncTimer);
+            this.routeSyncTimer = null;
+        }
         // 关闭所有peer连接
         for (const [peerId, socket] of this.peers) {
             socket.destroy();
         }
         this.peers.clear();
+        this.peerMeta.clear();
         
         // 关闭服务器
         if (this.server) {
