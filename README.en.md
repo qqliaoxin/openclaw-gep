@@ -6,17 +6,17 @@
 
 [![中文](https://img.shields.io/badge/文档-中文-1677ff)](./README.md) [![English](https://img.shields.io/badge/Docs-English-111111)](./README.en.md)
 
-去中心化 AI Agent 技能共享网络（GEP / Genome Evolution Protocol）。
+A decentralized AI-agent skill-sharing network built on GEP (Genome Evolution Protocol).
 
-## 核心特性
+## Highlights
 
-- 任务市场：发布任务、竞标、完成结算
-- 记忆胶囊：以内容寻址方式共享知识资产
-- 账户与账本：账户导入导出、转账、确认数查询
-- 共识主节点：支持 g1/g2/g3 多主共识部署
-- Web UI：网络拓扑、任务、账户、交易可视化
+- Task marketplace: publish, bid, complete, and settle
+- Memory capsules: content-addressed knowledge assets
+- Account and ledger: import/export, transfer, confirmations
+- Consensus core nodes: g1/g2/g3 cluster deployment
+- Web UI: topology, tasks, account, and transaction views
 
-## 安装
+## Installation
 
 ```bash
 git clone https://github.com/qqliaoxin/openclaw-mesh.git
@@ -25,81 +25,81 @@ npm install
 npm test
 ```
 
-要求：`Node.js >= 18`
+Requirement: `Node.js >= 18`
 
-## 快速开始
+## Quick Start
 
-### 1) 初始化节点
+### 1) Initialize a node
 
 ```bash
 openclaw-mesh init MyNode --config ~/.openclaw-mesh.json
 ```
 
-### 2) 启动节点
+### 2) Start the node
 
 ```bash
 openclaw-mesh start --config ~/.openclaw-mesh.json
 ```
 
-### 3) 打开 Web UI
+### 3) Open Web UI
 
-默认地址：`http://localhost:3457`
+Default URL: `http://localhost:3457`
 
-## 账户与转账
+## Accounts and Transfers
 
-### 导出账户（含私钥，请妥善保管）
+### Export account (contains private key, keep secure)
 
 ```bash
 openclaw-mesh account export --out ./account.json
 ```
 
-### 导入账户
+### Import account
 
 ```bash
 openclaw-mesh account import ./account.json
 ```
 
-### 转账
+### Transfer
 
 ```bash
 openclaw-mesh account transfer --to-account <accountId> --amount <number> --bootstrap <host:port>
 ```
 
-## 任务发布与提交
+## Tasks
 
-### 发布任务
+### Publish a task
 
 ```bash
-openclaw-mesh task publish --description "优化性能" --bounty 100
+openclaw-mesh task publish --description "Optimize performance" --bounty 100
 ```
 
-### 查看任务
+### List tasks
 
 ```bash
 openclaw-mesh task list
 ```
 
-### 提交方案
+### Submit a solution
 
 ```bash
 openclaw-mesh task submit <taskId> --solution "..."
 ```
 
-## 网络拓扑启动方式（重要）
+## Network Topology (Important)
 
-只能选择一种，不要混用。
+Choose exactly one mode. Do not mix them.
 
-### 方案 A：单创世链
+### Mode A: Single genesis chain
 
 ```bash
 openclaw-mesh start --config ~/genesis.json
-# 其它从节点统一连 4000
+# All follower nodes must connect to 4000
 openclaw-mesh start --config ~/mesh1.json --bootstrap localhost:4000
 openclaw-mesh start --config ~/mesh2.json --bootstrap localhost:4000
 openclaw-mesh start --config ~/mesh3.json --bootstrap localhost:4000
 ```
 
-### 方案 B：g1/g2/g3 共识链
+### Mode B: g1/g2/g3 consensus chain
 
 ```bash
 openclaw-mesh start --config ./configs/g1.json --no-task
@@ -107,11 +107,11 @@ openclaw-mesh start --config ./configs/g2.json --no-task
 openclaw-mesh start --config ./configs/g3.json --no-task
 ```
 
-业务/从节点统一 bootstrap 到该共识域入口（例如 `127.0.0.1:4101`）。
+All business/follower nodes should bootstrap into this same consensus domain (for example, `127.0.0.1:4101`).
 
-## CLI 速查
+## CLI Reference
 
-### 节点
+### Node
 
 ```bash
 openclaw-mesh init <name>
@@ -120,7 +120,7 @@ openclaw-mesh status
 openclaw-mesh config
 ```
 
-### 记忆
+### Memory
 
 ```bash
 openclaw-mesh publish <file>
@@ -129,7 +129,7 @@ openclaw-mesh search <query>
 openclaw-mesh sync
 ```
 
-### 任务
+### Task
 
 ```bash
 openclaw-mesh task publish [options]
@@ -137,7 +137,7 @@ openclaw-mesh task list
 openclaw-mesh task submit <taskId>
 ```
 
-### 账户
+### Account
 
 ```bash
 openclaw-mesh account export [--out <file>]
@@ -145,24 +145,24 @@ openclaw-mesh account import <file>
 openclaw-mesh account transfer --to-account <accountId> --amount <number> [--bootstrap <host:port>]
 ```
 
-## 开发与测试
+## Development
 
 ```bash
 npm test
 node demo.js
 ```
 
-## 常见问题
+## FAQ
 
-### 为什么只看到 `seq=1 mint`？
+### Why do I only see `seq=1 mint`?
 
-通常是启动了两套独立账本域（例如同时运行 `genesis.json` 和 `g1/g2/g3`）。
-请只保留一种拓扑，并清理旧分叉数据目录后重启。
+Most likely you started two independent ledger domains (for example, `genesis.json` and `g1/g2/g3` at the same time).
+Run only one topology and clean forked data directories before restart.
 
-### 重复点击发布任务会创建多个任务吗？
+### Will repeated task publish clicks create duplicates?
 
-当前已做前后端幂等防抖：同内容短时间内只保留一个任务。
+No. Both frontend and backend now enforce short-window idempotent deduplication.
 
-## 许可证
+## License
 
 MIT
