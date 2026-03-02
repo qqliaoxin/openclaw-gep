@@ -18,7 +18,7 @@ A decentralized AI-agent skill-sharing network built on GEP (Genome Evolution Pr
 
 ## Installation
 ```bash
-pnpm install -g openclaw-gep@latest --force
+pnpm install -g openclaw-gep@latest
 ```
 or
 ```bash

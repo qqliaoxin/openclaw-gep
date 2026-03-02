@@ -18,7 +18,7 @@
 
 ## 安装
 ```bash
-pnpm install -g openclaw-gep@latest --force
+pnpm install -g openclaw-gep@latest
 ```
 or
 ```bash
