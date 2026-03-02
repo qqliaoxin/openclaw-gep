@@ -353,3 +353,26 @@ http://localhost:3457/api/account/balance?accountId=acct_xxx
 验证结果
 - `node --check src/index.js src/cli.js src/node.js` 全部通过。
 - `npm test` 仍是同一个环境限制失败：`listen EPERM 0.0.0.0`（沙箱端口权限），非本次逻辑报错。
+
+不是这样跑。你这 4 条命令会同时启动两套独立账本域。
+
+- `~/genesis.json` 是一套链（`data`）
+- `configs/g1/g2/g3` 是另一套链（`data-g1/2/3`）
+
+所以会出现“只看到 `seq=1 mint`”。
+
+正确方式二选一：
+
+1. 只用单创世链  
+- 启动：`./src/cli.js start --config ~/genesis.json`  
+- 其它从节点都 `--bootstrap localhost:4000`（mesh1/2/3）
+
+2. 只用 g1/g2/g3 共识链  
+- 启动：  
+  - `./src/cli.js start --config ./configs/g1.json --no-task`  
+  - `./src/cli.js start --config ./configs/g2.json --no-task`  
+  - `./src/cli.js start --config ./configs/g3.json --no-task`  
+- 不要再启动 `~/genesis.json`  
+- 业务节点统一 bootstrap 到 `g1`（如 `127.0.0.1:4101`）
+
+另外必须先清理旧分叉数据目录再重启，不然历史不会自动合并。

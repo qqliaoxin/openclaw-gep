@@ -22,16 +22,20 @@ class OpenClawMesh {
             nodeId: options.nodeId || this.generateNodeId(),
             port: options.port || 0,
             bootstrapNodes: options.bootstrapNodes || [],
+            genesisNodes: options.genesisNodes || (process.env.OPENCLAW_GENESIS_NODES ? process.env.OPENCLAW_GENESIS_NODES.split(',').map(s => s.trim()).filter(Boolean) : []),
             dataDir: options.dataDir || './data',
             webPort: options.webPort || 3457,
             isGenesisNode: options.isGenesisNode ?? process.env.OPENCLAW_IS_GENESIS === '1',
             bootstrapLedger: options.bootstrapLedger ?? (
                 process.env.OPENCLAW_BOOTSTRAP_LEDGER === '1' ||
-                ((options.bootstrapNodes || []).length === 0 && (options.isGenesisNode ?? process.env.OPENCLAW_IS_GENESIS === '1'))
+                (
+                    (options.isGenesisNode ?? process.env.OPENCLAW_IS_GENESIS === '1') &&
+                    (options.bootstrapNodes || []).length === 0 &&
+                    (options.genesisNodes || []).length === 0
+                )
             ),
             acceptTasks: options.acceptTasks ?? process.env.OPENCLAW_ACCEPT_TASKS !== '0',
             masterUrl: options.masterUrl || process.env.OPENCLAW_MASTER_URL || null,
-            genesisNodes: options.genesisNodes || (process.env.OPENCLAW_GENESIS_NODES ? process.env.OPENCLAW_GENESIS_NODES.split(',').map(s => s.trim()).filter(Boolean) : []),
             consensusVoterIds: options.consensusVoterIds || (process.env.OPENCLAW_CONSENSUS_VOTERS ? process.env.OPENCLAW_CONSENSUS_VOTERS.split(',').map(s => s.trim()).filter(Boolean) : []),
             genesisOperatorAccountId: options.genesisOperatorAccountId || process.env.OPENCLAW_GENESIS_OPERATOR || null,
             capsulePriceDefault: Number(options.capsulePriceDefault ?? process.env.OPENCLAW_CAPSULE_PRICE ?? 10),
@@ -555,16 +559,35 @@ class OpenClawMesh {
         });
         
         // 监听交易广播
-        this.node.on('tx:received', (tx) => {
+        this.node.on('tx:received', (tx, peerId) => {
             if (!tx) return;
+            if (tx.txId && this.ledger.getTxById(tx.txId)) {
+                return;
+            }
             if (this.isLedgerLeader()) {
                 this.proposeTx(tx);
-            } else if (this.isCoreNode() && this.consensus.leaderId) {
-                this.node.sendToPeer(this.consensus.leaderId, {
+                return;
+            }
+            if (!this.isCoreNode()) {
+                return;
+            }
+            if (this.consensus.leaderId) {
+                const ok = this.node.sendToPeer(this.consensus.leaderId, {
                     type: 'tx',
                     payload: tx,
                     timestamp: Date.now()
                 });
+                if (!ok && tx.txId) {
+                    this.pendingTxs.set(tx.txId, { tx, attempts: 0, nextRetryAt: Date.now() + 1500 });
+                }
+                return;
+            }
+            if (tx.txId) {
+                // Leader unknown during election window: keep tx pending for relay retry.
+                this.pendingTxs.set(tx.txId, { tx, attempts: 0, nextRetryAt: Date.now() + 1500 });
+            }
+            if (peerId) {
+                console.log(`⏳ Received tx ${String(tx.txId || '').slice(0, 12)} from ${peerId}, waiting for leader`);
             }
         });
 
@@ -584,7 +607,10 @@ class OpenClawMesh {
         // 监听交易日志同步
         this.node.on('tx:log', (entry) => {
             if (!entry) return;
-            this.ledger.applyLogEntry(entry);
+            const applied = this.ledger.applyLogEntry(entry);
+            if (applied && applied.reason === 'Seq conflict') {
+                console.error(`❌ Ledger seq conflict on seq=${entry.seq}, txId=${entry.txId}. Local chain differs from peer chain.`);
+            }
             if (entry.txId) {
                 this.pendingTxs.delete(entry.txId);
             }
@@ -621,7 +647,10 @@ class OpenClawMesh {
                 console.log(`📥 tx_log_batch from ${peerId} count=${entries.length} seq=${firstSeq}..${lastSeq}`);
             }
             for (const entry of entries) {
-                this.ledger.applyLogEntry(entry);
+                const applied = this.ledger.applyLogEntry(entry);
+                if (applied && applied.reason === 'Seq conflict') {
+                    console.error(`❌ Ledger seq conflict on seq=${entry.seq}, txId=${entry.txId}. Local chain differs from peer chain.`);
+                }
                 if (entry?.txId) {
                     this.pendingTxs.delete(entry.txId);
                 }

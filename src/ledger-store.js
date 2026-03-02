@@ -297,8 +297,15 @@ class LedgerStore {
         if (!entry || !entry.seq) {
             return { applied: false, reason: 'Missing seq' };
         }
-        const exists = this.db.prepare('SELECT 1 FROM tx_log WHERE seq = ? OR tx_id = ?').get(entry.seq, entry.txId);
-        if (exists) return { applied: false, reason: 'Duplicate' };
+        const seqRow = this.db.prepare('SELECT tx_id FROM tx_log WHERE seq = ?').get(entry.seq);
+        if (seqRow) {
+            if (seqRow.tx_id === entry.txId) {
+                return { applied: false, reason: 'Duplicate' };
+            }
+            return { applied: false, reason: 'Seq conflict' };
+        }
+        const txRow = this.db.prepare('SELECT seq FROM tx_log WHERE tx_id = ?').get(entry.txId);
+        if (txRow) return { applied: false, reason: 'Duplicate' };
         const tx = {
             type: entry.type,
             from: entry.from,

@@ -30,6 +30,7 @@ class MeshNode extends EventEmitter {
         this.defaultHops = options.defaultHops || 3;
         this.taskHops = options.taskHops || 4;
         this.routeSyncTimer = null;
+        this.bootstrapRetryTimer = null;
         this.routeConnectBackoffMs = options.routeConnectBackoffMs || 30000;
         this.routeConnectAttempts = new Map(); // address -> nextAllowedAt
         
@@ -204,6 +205,7 @@ class MeshNode extends EventEmitter {
                 
                 // 启动心跳
                 this.startHeartbeat();
+                this.startBootstrapReconnect();
                 this.startRouteSync();
                 
                 resolve();
@@ -352,9 +354,33 @@ class MeshNode extends EventEmitter {
             try {
                 await this.connectToPeer(addr);
             } catch (e) {
-                console.error(`Failed to connect to bootstrap ${addr}:`, e.message);
+                console.error(`Failed to connect to bootstrap ${addr}:`, e?.message || String(e) || 'unknown error');
             }
         }
+    }
+
+    startBootstrapReconnect() {
+        if (this.bootstrapRetryTimer) {
+            clearInterval(this.bootstrapRetryTimer);
+        }
+        const tick = () => {
+            const now = Date.now();
+            for (const addr of this.bootstrapNodes) {
+                if (!addr || typeof addr !== 'string') continue;
+                const alreadyByAddress = this.peers.has(addr);
+                const alreadyByMeta = Array.from(this.peerMeta.values()).some(meta => meta?.address === addr);
+                if (alreadyByAddress || alreadyByMeta) continue;
+                const nextAllowedAt = this.routeConnectAttempts.get(addr) || 0;
+                if (now < nextAllowedAt) continue;
+                this.routeConnectAttempts.set(addr, now + 5000);
+                this.connectToPeer(addr).catch((e) => {
+                    const msg = e?.message || String(e) || 'unknown error';
+                    console.error(`Retry connect bootstrap ${addr} failed: ${msg}`);
+                });
+            }
+        };
+        setTimeout(tick, 1500);
+        this.bootstrapRetryTimer = setInterval(tick, 5000);
     }
     
     async connectToPeer(address) {
@@ -763,6 +789,10 @@ class MeshNode extends EventEmitter {
     }
     
     async stop() {
+        if (this.bootstrapRetryTimer) {
+            clearInterval(this.bootstrapRetryTimer);
+            this.bootstrapRetryTimer = null;
+        }
         if (this.routeSyncTimer) {
             clearInterval(this.routeSyncTimer);
             this.routeSyncTimer = null;

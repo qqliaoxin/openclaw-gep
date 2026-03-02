@@ -457,14 +457,22 @@ async function config() {
 }
 
 async function accountCommand(subcommand, args, configPath = null) {
-    const config = ensureNodeConfig(loadConfig(configPath));
+    const config = loadConfig(configPath) || {};
+    if (!config.nodeId) {
+        config.nodeId = 'node_' + require('crypto').randomBytes(8).toString('hex');
+    }
     const dataDir = config.dataDir || './data';
+    const isBootstrapLedger = config.bootstrapLedger === true || (
+        (config.isGenesisNode || false) &&
+        ((config.bootstrapNodes || []).length === 0) &&
+        ((config.genesisNodes || []).length === 0)
+    );
     let ledger = null;
     try {
         if (subcommand === 'export') {
             const wallet = loadOrCreateWallet(dataDir);
             ledger = new LedgerStore(dataDir);
-            ledger.init({ isGenesis: config.isGenesisNode || false, genesisAccountId: wallet.accountId, genesisSupply: 1000000, genesisPublicKeyPem: wallet.publicKeyPem, genesisPrivateKeyPem: wallet.privateKeyPem });
+            ledger.init({ isGenesis: isBootstrapLedger, genesisAccountId: wallet.accountId, genesisSupply: 1000000, genesisPublicKeyPem: wallet.publicKeyPem, genesisPrivateKeyPem: wallet.privateKeyPem });
             const payload = {
                 version: 2,
                 exportedAt: new Date().toISOString(),
@@ -501,7 +509,7 @@ async function accountCommand(subcommand, args, configPath = null) {
         if (subcommand === 'transfer') {
             const wallet = loadOrCreateWallet(dataDir);
             ledger = new LedgerStore(dataDir);
-            ledger.init({ isGenesis: config.isGenesisNode || false, genesisAccountId: wallet.accountId, genesisSupply: 1000000, genesisPublicKeyPem: wallet.publicKeyPem, genesisPrivateKeyPem: wallet.privateKeyPem });
+            ledger.init({ isGenesis: isBootstrapLedger, genesisAccountId: wallet.accountId, genesisSupply: 1000000, genesisPublicKeyPem: wallet.publicKeyPem, genesisPrivateKeyPem: wallet.privateKeyPem });
             const toAccountIdRaw = getArg(args, '--to-account') || getArg(args, '--to');
             const amount = Number(getArg(args, '--amount'));
             const bootstrap = getArg(args, '--bootstrap');
@@ -537,24 +545,46 @@ async function accountCommand(subcommand, args, configPath = null) {
                 signature,
                 txId: crypto.createHash('sha256').update(JSON.stringify({ ...payload, signature })).digest('hex')
             };
+            const tempNodeId = `${config.nodeId}_cli_${crypto.randomBytes(3).toString('hex')}`;
             const node = new MeshNode({
-                nodeId: config.nodeId,
+                nodeId: tempNodeId,
                 port: 0,
                 bootstrapNodes
             });
             try {
                 await node.init();
-                await new Promise(resolve => setTimeout(resolve, 300));
-                node.broadcastAll({
+                // Wait briefly for at least one live peer to avoid sending tx before handshake.
+                const waitStart = Date.now();
+                while (Date.now() - waitStart < 5000) {
+                    if ((node.getPeers() || []).length > 0) break;
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+                if ((node.getPeers() || []).length === 0) {
+                    console.error('❌ No reachable peers after 5s. Check --bootstrap and node connectivity.');
+                    return;
+                }
+
+                const envelope = {
                     type: 'tx',
                     payload: tx,
                     timestamp: Date.now()
-                });
-                await new Promise(resolve => setTimeout(resolve, 300));
+                };
+                let relayedPeers = 0;
+                for (let i = 0; i < 5; i++) {
+                    const peers = node.getPeers() || [];
+                    for (const peer of peers) {
+                        if (node.sendToPeer(peer.nodeId, envelope)) {
+                            relayedPeers += 1;
+                        }
+                    }
+                    node.broadcastAll(envelope);
+                    await new Promise(resolve => setTimeout(resolve, 450));
+                }
+                await new Promise(resolve => setTimeout(resolve, 800));
+                console.log(JSON.stringify({ submitted: true, txId: tx.txId, relayedPeers }, null, 2));
             } finally {
                 await node.stop();
             }
-            console.log(JSON.stringify({ submitted: true, txId: tx.txId }, null, 2));
             return;
         }
         console.log('Usage: openclaw-mesh account <export|import|transfer>');
