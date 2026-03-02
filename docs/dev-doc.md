@@ -213,38 +213,38 @@ http://localhost:3457/api/account/balance?accountId=acct_xxx
 - 由主节点（`isGenesisNode=true`）参与投票，超过半数即当选
 - Leader 定时发心跳；心跳超时自动触发重选
 - 代码：
-  - [src/node.js:149](/Users/vector/.openclaw/workspace/openclaw-mesh/src/node.js:149)
-  - [src/index.js:623](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:623)
-  - [src/index.js:696](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:696)
+  - [src/node.js:149](/Users/vector/.openclaw/workspace/openclaw-task/src/node.js:149)
+  - [src/index.js:623](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:623)
+  - [src/index.js:696](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:696)
 
 2. 账本写入改为仅 Leader 执行
 - 原先 `isGenesisNode` 直接 `appendAsMaster`，现在只有 `isLedgerLeader()` 才写账本并广播 `tx_log`
 - 其他节点（含路由主）只转发 `tx` 并同步 `tx_log`
 - 代码：
-  - [src/index.js:397](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:397)
-  - [src/index.js:770](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:770)
-  - [src/index.js:162](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:162)
-  - [src/index.js:191](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:191)
+  - [src/index.js:397](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:397)
+  - [src/index.js:770](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:770)
+  - [src/index.js:162](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:162)
+  - [src/index.js:191](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:191)
 
 3. 主节点互联路由 + 发现保持
 - 你上次要的 `route_sync` 保留，并继续自动扩展主节点连接
 - 代码：
-  - [src/node.js:143](/Users/vector/.openclaw/workspace/openclaw-mesh/src/node.js:143)
-  - [src/node.js:529](/Users/vector/.openclaw/workspace/openclaw-mesh/src/node.js:529)
+  - [src/node.js:143](/Users/vector/.openclaw/workspace/openclaw-task/src/node.js:143)
+  - [src/node.js:529](/Users/vector/.openclaw/workspace/openclaw-task/src/node.js:529)
 
 4. 创世账本引导改为显式控制
 - 新增 `bootstrapLedger`（CLI: `--bootstrap-ledger`），仅首个创世节点需要
 - 其他路由主不再默认自行创世，避免各自铸币导致分叉
 - 代码：
-  - [src/index.js:27](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:27)
-  - [src/index.js:97](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:97)
-  - [src/cli.js:105](/Users/vector/.openclaw/workspace/openclaw-mesh/src/cli.js:105)
-  - [src/cli.js:192](/Users/vector/.openclaw/workspace/openclaw-mesh/src/cli.js:192)
+  - [src/index.js:27](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:27)
+  - [src/index.js:97](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:97)
+  - [src/cli.js:105](/Users/vector/.openclaw/workspace/openclaw-task/src/cli.js:105)
+  - [src/cli.js:192](/Users/vector/.openclaw/workspace/openclaw-task/src/cli.js:192)
 
 5. 状态增加 Leader 信息
 - `getStats()` 增加 `leaderId / isLedgerLeader / term`
 - 代码：
-  - [src/index.js:983](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:983)
+  - [src/index.js:983](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:983)
 
 **建议启动方式**
 1. 首个主节点（创世 + 可被选为记账主）
@@ -271,19 +271,19 @@ http://localhost:3457/api/account/balance?accountId=acct_xxx
 - 记账主（leader）不再直接写 `ledger`，而是先写本地共识日志，再复制到投票节点。
 - 只有当某条日志在多数节点复制成功后才 `commit` 并应用到账本。
 - 关键实现：
-  - [src/index.js](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js) `startRaftConsensus/startElection/becomeLeader/advanceCommitIndex/applyCommittedLogEntries/proposeTx`
+  - [src/index.js](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js) `startRaftConsensus/startElection/becomeLeader/advanceCommitIndex/applyCommittedLogEntries/proposeTx`
 
 2. 日志冲突回滚
 - follower 处理 `AppendEntries` 时校验 `prevLogIndex/prevLogTerm`。
 - 冲突时会截断本地未提交冲突段并回退，等待 leader 重发，保证日志最终一致。
 - 关键实现：
-  - [src/index.js](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js) `onRaftAppendEntries/onRaftAppendEntriesResponse`
+  - [src/index.js](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js) `onRaftAppendEntries/onRaftAppendEntriesResponse`
 
 3. 任期持久化（含 votedFor/log/commitIndex）
 - 新增持久化文件：`<dataDir>/consensus-state.json`
 - 启动时恢复 term/votedFor/log/commitIndex/lastApplied，重启不会丢选举状态。
 - 关键实现：
-  - [src/index.js](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js) `loadConsensusState/persistConsensusState`
+  - [src/index.js](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js) `loadConsensusState/persistConsensusState`
   - 新增路径字段 `consensusStatePath`
 
 4. 选主与心跳消息
@@ -293,14 +293,14 @@ http://localhost:3457/api/account/balance?accountId=acct_xxx
   - `raft_append_entries`
   - `raft_append_entries_response`
 - 关键实现：
-  - [src/node.js](/Users/vector/.openclaw/workspace/openclaw-mesh/src/node.js)
+  - [src/node.js](/Users/vector/.openclaw/workspace/openclaw-task/src/node.js)
 
 5. 固定投票集合支持（用于“严格多数”）
 - 新增 CLI 参数：`--consensus-voters node_a,node_b,node_c`
 - 不配置时会回退为动态发现（不建议生产）。
 - 关键实现：
-  - [src/cli.js](/Users/vector/.openclaw/workspace/openclaw-mesh/src/cli.js)
-  - [src/index.js](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js) `consensusVoterIds/getVoterNodeIds/getMajorityCount`
+  - [src/cli.js](/Users/vector/.openclaw/workspace/openclaw-task/src/cli.js)
+  - [src/index.js](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js) `consensusVoterIds/getVoterNodeIds/getMajorityCount`
 
 **你需要这样用（关键）**
 1. 每个核心主节点配置一致的 `consensusVoterIds`（固定成员表）。
@@ -325,12 +325,12 @@ http://localhost:3457/api/account/balance?accountId=acct_xxx
 - 关键状态（`term/votedFor`）仍走立即持久化，保证任期语义。
 - 退出时强制 flush，避免尾部状态丢失。
 - 代码：  
-  - [src/index.js:116](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:116)  
-  - [src/index.js:138](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:138)  
-  - [src/index.js:771](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:771)  
-  - [src/index.js:826](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:826)  
-  - [src/index.js:852](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:852)  
-  - [src/index.js:1430](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:1430)
+  - [src/index.js:116](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:116)  
+  - [src/index.js:138](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:138)  
+  - [src/index.js:771](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:771)  
+  - [src/index.js:826](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:826)  
+  - [src/index.js:852](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:852)  
+  - [src/index.js:1430](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:1430)
 
 2. Raft 复制改为按需复制 + 心跳分离 + 单飞控制
 - 心跳周期里：有待复制日志才 `replicateAll()`，否则只发空心跳。
@@ -338,17 +338,17 @@ http://localhost:3457/api/account/balance?accountId=acct_xxx
 - in-flight 增加超时回收（2.2s），避免丢包后长期卡死。
 - follower 侧仍保留冲突回滚逻辑，leader 收到响应后按 `nextIndex/matchIndex` 推进。
 - 代码：  
-  - [src/index.js:746](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:746)  
-  - [src/index.js:971](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:971)  
-  - [src/index.js:997](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:997)  
-  - [src/index.js:1006](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:1006)  
-  - [src/index.js:1016](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:1016)  
-  - [src/index.js:1024](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:1024)
+  - [src/index.js:746](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:746)  
+  - [src/index.js:971](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:971)  
+  - [src/index.js:997](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:997)  
+  - [src/index.js:1006](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:1006)  
+  - [src/index.js:1016](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:1016)  
+  - [src/index.js:1024](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:1024)
 
 3. 非 leader 的交易中继优化
 - 优先直发当前 leader，失败再退回全网广播，减少无效 P2P 扩散。
 - 代码：  
-  - [src/index.js:341](/Users/vector/.openclaw/workspace/openclaw-mesh/src/index.js:341)
+  - [src/index.js:341](/Users/vector/.openclaw/workspace/openclaw-task/src/index.js:341)
 
 验证结果
 - `node --check src/index.js src/cli.js src/node.js` 全部通过。

@@ -19,8 +19,8 @@
 ## 安装
 
 ```bash
-git clone https://github.com/qqliaoxin/openclaw-mesh.git
-cd openclaw-mesh
+git clone https://github.com/qqliaoxin/openclaw-task.git
+cd openclaw-task
 npm install
 npm test
 ```
@@ -32,13 +32,13 @@ npm test
 ### 1) 初始化节点
 
 ```bash
-openclaw-mesh init MyNode --config ~/.openclaw-mesh.json
+openclaw-task init MyNode --config ~/.openclaw-task.json
 ```
 
 ### 2) 启动节点
 
 ```bash
-openclaw-mesh start --config ~/.openclaw-mesh.json
+openclaw-task start --config ~/.openclaw-task.json
 ```
 
 ### 3) 打开 Web UI
@@ -50,19 +50,19 @@ openclaw-mesh start --config ~/.openclaw-mesh.json
 ### 导出账户（含私钥，请妥善保管）
 
 ```bash
-openclaw-mesh account export --out ./account.json
+openclaw-task account export --out ./account.json
 ```
 
 ### 导入账户
 
 ```bash
-openclaw-mesh account import ./account.json
+openclaw-task account import ./account.json
 ```
 
 ### 转账
 
 ```bash
-openclaw-mesh account transfer --to-account <accountId> --amount <number> --bootstrap <host:port>
+openclaw-task account transfer --to-account <accountId> --amount <number> --bootstrap <host:port>
 ```
 
 ## 任务发布与提交
@@ -70,19 +70,19 @@ openclaw-mesh account transfer --to-account <accountId> --amount <number> --boot
 ### 发布任务
 
 ```bash
-openclaw-mesh task publish --description "优化性能" --bounty 100
+openclaw-task task publish --description "优化性能" --bounty 100
 ```
 
 ### 查看任务
 
 ```bash
-openclaw-mesh task list
+openclaw-task task list
 ```
 
 ### 提交方案
 
 ```bash
-openclaw-mesh task submit <taskId> --solution "..."
+openclaw-task task submit <taskId> --solution "..."
 ```
 
 ## 网络拓扑启动方式（重要）
@@ -92,19 +92,19 @@ openclaw-mesh task submit <taskId> --solution "..."
 ### 方案 A：单创世链
 
 ```bash
-openclaw-mesh start --config ~/genesis.json
+openclaw-task start --config ~/genesis.json
 # 其它从节点统一连 4000
-openclaw-mesh start --config ~/mesh1.json --bootstrap localhost:4000
-openclaw-mesh start --config ~/mesh2.json --bootstrap localhost:4000
-openclaw-mesh start --config ~/mesh3.json --bootstrap localhost:4000
+openclaw-task start --config ~/mesh1.json --bootstrap localhost:4000
+openclaw-task start --config ~/mesh2.json --bootstrap localhost:4000
+openclaw-task start --config ~/mesh3.json --bootstrap localhost:4000
 ```
 
 ### 方案 B：g1/g2/g3 共识链
 
 ```bash
-openclaw-mesh start --config ./configs/g1.json --no-task
-openclaw-mesh start --config ./configs/g2.json --no-task
-openclaw-mesh start --config ./configs/g3.json --no-task
+openclaw-task start --config ./configs/g1.json --no-task
+openclaw-task start --config ./configs/g2.json --no-task
+openclaw-task start --config ./configs/g3.json --no-task
 ```
 
 业务/从节点统一 bootstrap 到该共识域入口（例如 `127.0.0.1:4101`）。
@@ -114,35 +114,35 @@ openclaw-mesh start --config ./configs/g3.json --no-task
 ### 节点
 
 ```bash
-openclaw-mesh init <name>
-openclaw-mesh start [options]
-openclaw-mesh status
-openclaw-mesh config
+openclaw-task init <name>
+openclaw-task start [options]
+openclaw-task status
+openclaw-task config
 ```
 
 ### 记忆
 
 ```bash
-openclaw-mesh publish <file>
-openclaw-mesh memories [filter]
-openclaw-mesh search <query>
-openclaw-mesh sync
+openclaw-task publish <file>
+openclaw-task memories [filter]
+openclaw-task search <query>
+openclaw-task sync
 ```
 
 ### 任务
 
 ```bash
-openclaw-mesh task publish [options]
-openclaw-mesh task list
-openclaw-mesh task submit <taskId>
+openclaw-task task publish [options]
+openclaw-task task list
+openclaw-task task submit <taskId>
 ```
 
 ### 账户
 
 ```bash
-openclaw-mesh account export [--out <file>]
-openclaw-mesh account import <file>
-openclaw-mesh account transfer --to-account <accountId> --amount <number> [--bootstrap <host:port>]
+openclaw-task account export [--out <file>]
+openclaw-task account import <file>
+openclaw-task account transfer --to-account <accountId> --amount <number> [--bootstrap <host:port>]
 ```
 
 ## 开发与测试

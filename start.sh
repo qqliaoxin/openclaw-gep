@@ -30,7 +30,7 @@ fi
 echo "✅ 依赖已安装"
 
 # 检查是否已初始化
-if [ ! -f "$HOME/.openclaw-mesh.json" ]; then
+if [ ! -f "$HOME/.openclaw-task.json" ]; then
     echo "🔧 初始化节点..."
     node src/cli.js init "Node_$(hostname)"
 fi

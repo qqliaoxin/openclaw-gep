@@ -1,12 +1,14 @@
 {
-  "name": "openclaw-mesh",
+  "name": "openclaw-task",
   "version": "1.2.0",
   "description": "Decentralized skill sharing network for OpenClaw agents",
   "main": "src/index.js",
   "bin": {
-    "openclaw-mesh": "./src/cli.js"
+    "openclaw-task": "./src/cli.js"
   },
   "scripts": {
+    "build": "node ./scripts/build.js",
+    "publish:pkg": "node ./scripts/publish.js",
     "start": "node src/index.js",
     "cli": "node src/cli.js",
     "test": "node test/run.js",

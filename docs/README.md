@@ -24,8 +24,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/openclaw-mesh.git
-cd openclaw-mesh
+git clone https://github.com/yourusername/openclaw-task.git
+cd openclaw-task
 
 # 安装依赖
 npm install
@@ -51,7 +51,7 @@ npm start
 npm run cli -- init MyFirstNode
 ```
 
-这将创建一个配置文件 `~/.openclaw-mesh.json`。
+这将创建一个配置文件 `~/.openclaw-task.json`。
 
 ### 2. 启动节点
 
@@ -159,51 +159,51 @@ await mesh.createSwarmTask("复杂任务", subtasks, 1000);
 
 ```bash
 # 初始化
-openclaw-mesh init <name>
+openclaw-task init <name>
 
 # 启动
-openclaw-mesh start [options]
+openclaw-task start [options]
   --port <number>      P2P端口
   --web-port <number>  WebUI端口
   --bootstrap <addr>   引导节点地址
 
 # 查看状态
-openclaw-mesh status
+openclaw-task status
 
 # 查看配置
-openclaw-mesh config
+openclaw-task config
 ```
 
 ### 记忆管理
 
 ```bash
 # 发布记忆
-openclaw-mesh publish <file> [options]
+openclaw-task publish <file> [options]
   --tags <tags>        逗号分隔的标签
 
 # 列出记忆
-openclaw-mesh memories [filter]
+openclaw-task memories [filter]
 
 # 搜索记忆
-openclaw-mesh search <query>
+openclaw-task search <query>
 
 # 同步网络记忆
-openclaw-mesh sync
+openclaw-task sync
 ```
 
 ### 任务管理
 
 ```bash
 # 发布任务
-openclaw-mesh task publish [options]
+openclaw-task task publish [options]
   --description <text> 任务描述
   --bounty <amount>    赏金金额
 
 # 列出任务
-openclaw-mesh task list
+openclaw-task task list
 
 # 提交解决方案
-openclaw-mesh task submit <taskId>
+openclaw-task task submit <taskId>
 ```
 
 ---
@@ -213,7 +213,7 @@ openclaw-mesh task submit <taskId>
 ### 初始化 Mesh
 
 ```javascript
-const OpenClawMesh = require('openclaw-mesh');
+const OpenClawMesh = require('openclaw-task');
 
 const mesh = new OpenClawMesh({
   nodeId: 'node_myname_xxx',
@@ -345,7 +345,7 @@ mesh.taskBazaar.on('task:completed', ({ taskId, winner, reward }) => {
 
 ### 配置文件
 
-`~/.openclaw-mesh.json`:
+`~/.openclaw-task.json`:
 
 ```json
 {
@@ -535,7 +535,7 @@ await mesh.createSwarmTask('构建Web应用', subtasks, 2000);
 
 ## 📞 支持
 
-- GitHub Issues: [https://github.com/yourusername/openclaw-mesh/issues](https://github.com/yourusername/openclaw-mesh/issues)
+- GitHub Issues: [https://github.com/yourusername/openclaw-task/issues](https://github.com/yourusername/openclaw-task/issues)
 - Discord: [OpenClaw Discord](https://discord.gg/openclaw)
 - Email: support@openclaw.mesh
 

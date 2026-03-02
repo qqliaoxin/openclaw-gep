@@ -5,7 +5,7 @@
 ### 1. 安装 (30秒)
 
 ```bash
-cd ~/.openclaw/workspace/openclaw-mesh
+cd ~/.openclaw/workspace/openclaw-task
 npm install
 ```
 
@@ -19,7 +19,7 @@ npm install
 ```
 ✅ Node initialized: MyFirstNode
    Node ID: node_xxx
-   Config: ~/.openclaw-mesh.json
+   Config: ~/.openclaw-task.json
 ```
 
 ### 3. 启动节点 (5秒)
@@ -149,7 +149,7 @@ node demo.js
 ## 📁 项目结构
 
 ```
-openclaw-mesh/
+openclaw-task/
 ├── src/
 │   ├── index.js           # 主入口
 │   ├── node.js            # P2P网络节点
@@ -174,7 +174,7 @@ openclaw-mesh/
 
 ## 🔧 配置文件
 
-位置: `~/.openclaw-mesh.json`
+位置: `~/.openclaw-task.json`
 
 ```json
 {
