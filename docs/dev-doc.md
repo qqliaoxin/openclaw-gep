@@ -401,3 +401,9 @@ openclaw-gep start --safe-dashboard
 ```
 
 补充：我做了持久化，开启后会写入配置 `safeDashboard=true` 和 `transferDisabled=true`，后续重启仍生效。
+
+新增启动参数 --faucet-dashboard，开启后 Dashboard 只显示 Network、Tasks、Faucet，并新增水龙头页面可转账 10 CLAW；同时用 SQLite 记录领取时间，24 小时内不能重复领取。
+
+用法
+
+./src/cli.js start --faucet-dashboard

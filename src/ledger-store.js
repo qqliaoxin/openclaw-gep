@@ -56,6 +56,12 @@ class LedgerStore {
                 key TEXT PRIMARY KEY,
                 value TEXT
             );
+            CREATE TABLE IF NOT EXISTS faucet_claims (
+                account_id TEXT PRIMARY KEY,
+                last_claim_at INTEGER,
+                claim_count INTEGER,
+                last_tx_id TEXT
+            );
         `);
 
         if (isGenesis) {
@@ -78,6 +84,33 @@ class LedgerStore {
         if (!this.getMeta('head_hash')) {
             this.rebuildHeadHash();
         }
+    }
+
+    getFaucetClaim(accountId) {
+        return this.db.prepare(
+            'SELECT account_id as accountId, last_claim_at as lastClaimAt, claim_count as claimCount, last_tx_id as lastTxId FROM faucet_claims WHERE account_id = ?'
+        ).get(accountId) || null;
+    }
+
+    canClaimFaucet(accountId, nowMs, windowMs) {
+        const row = this.getFaucetClaim(accountId);
+        if (!row || !row.lastClaimAt) return { ok: true, waitMs: 0 };
+        const elapsed = Number(nowMs) - Number(row.lastClaimAt);
+        if (elapsed >= windowMs) return { ok: true, waitMs: 0 };
+        return { ok: false, waitMs: Math.max(0, windowMs - elapsed), lastClaimAt: row.lastClaimAt };
+    }
+
+    recordFaucetClaim(accountId, txId, nowMs) {
+        const existing = this.getFaucetClaim(accountId);
+        const nextCount = (existing?.claimCount || 0) + 1;
+        this.db.prepare(`
+            INSERT INTO faucet_claims (account_id, last_claim_at, claim_count, last_tx_id)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(account_id) DO UPDATE SET
+                last_claim_at = excluded.last_claim_at,
+                claim_count = excluded.claim_count,
+                last_tx_id = excluded.last_tx_id
+        `).run(accountId, Number(nowMs), Number(nextCount), txId || null);
     }
 
     close() {

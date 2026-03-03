@@ -380,6 +380,52 @@ class WebUIServer {
                 res.end(JSON.stringify(data));
             });
             return;
+        } else if (url === '/api/faucet/claim' && req.method === 'POST') {
+            if (!this.mesh?.options?.faucetDashboard) {
+                res.writeHead(404);
+                res.end(JSON.stringify({ error: 'Faucet not enabled' }));
+                return;
+            }
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', async () => {
+                try {
+                    const payload = JSON.parse(body || '{}');
+                    const accountId = String(payload.accountId || '').trim();
+                    if (!/^acct_[a-f0-9]{16}$/i.test(accountId)) {
+                        data = { error: 'Invalid accountId' };
+                    } else if (!this.mesh?.ledger || !this.mesh?.wallet) {
+                        data = { error: 'Ledger not initialized' };
+                    } else {
+                        const now = Date.now();
+                        const windowMs = 24 * 60 * 60 * 1000;
+                        const claim = this.mesh.ledger.canClaimFaucet(accountId, now, windowMs);
+                        if (!claim.ok) {
+                            data = { error: 'Faucet cooldown', waitMs: claim.waitMs || 0 };
+                        } else {
+                            const amount = 10;
+                            const available = this.mesh.ledger.getBalance(this.mesh.wallet.accountId);
+                            if (available < amount) {
+                                data = { error: 'Insufficient faucet balance' };
+                            } else {
+                                const tx = this.mesh.createSignedTransfer(accountId, amount);
+                                const result = this.mesh.submitTx(tx);
+                                if (result && result.accepted === false) {
+                                    data = { error: result.reason || 'Faucet transfer failed' };
+                                } else {
+                                    this.mesh.ledger.recordFaucetClaim(accountId, tx.txId, now);
+                                    data = { success: true, txId: tx.txId, amount };
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    data = { error: e.message };
+                }
+                res.writeHead(200);
+                res.end(JSON.stringify(data));
+            });
+            return;
         } else if (url === '/api/memory/publish' && req.method === 'POST') {
             let body = '';
             req.on('data', chunk => body += chunk);
@@ -503,6 +549,7 @@ class WebUIServer {
     
     generateHTML() {
         const safeDashboard = this.mesh?.options?.safeDashboard === true || this.mesh?.options?.disableTransfer === true;
+        const faucetDashboard = this.mesh?.options?.faucetDashboard === true;
         return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1123,6 +1170,7 @@ class WebUIServer {
         </header>
         
         <script>
+            const faucetDashboard = ${faucetDashboard ? 'true' : 'false'};
             const lang = {
                 en: {
                     nodeId: 'Node ID', peers: 'Peers', memories: 'Memories', tasks: 'Tasks', uptime: 'Uptime',
@@ -1143,6 +1191,10 @@ class WebUIServer {
                     importAccount: 'Import Account', importHint: 'Paste exported JSON (keep it secret)', chooseFile: 'Choose File',
                     price: 'Price', action: 'Action', buy: 'Buy', capsulePrice: 'Price (CLAW):',
                     transfer: 'Transfer', toAccountId: 'To Account ID', amount: 'Amount', transferSubmit: 'Send'
+                    , faucet: 'Faucet', faucetTitle: 'Faucet', faucetDesc: '10 CLAW per account, once every 24 hours.',
+                    faucetAccountId: 'Account ID', faucetClaim: 'Claim 10 CLAW',
+                    faucetProvideAccount: 'Provide account ID', faucetSent: 'Sent 10 CLAW. Tx: ',
+                    faucetCooldown: 'Cooldown. Try again in ~', faucetFailed: 'Failed'
                 },
                 zh: {
                     nodeId: '节点ID', peers: '节点', memories: '记忆', tasks: '任务', uptime: '运行时间',
@@ -1163,6 +1215,10 @@ class WebUIServer {
                     importAccount: '导入账户', importHint: '粘贴导出JSON（请保密）', chooseFile: '选择文件',
                     price: '价格', action: '操作', buy: '购买', capsulePrice: '价格 (CLAW)：',
                     transfer: '转账', toAccountId: '转入账户ID', amount: '金额', transferSubmit: '发送'
+                    , faucet: '水龙头', faucetTitle: '水龙头', faucetDesc: '每个账户 24 小时可领一次 10 CLAW。',
+                    faucetAccountId: '账户ID', faucetClaim: '领取 10 CLAW',
+                    faucetProvideAccount: '请输入账户ID', faucetSent: '已发放 10 CLAW，交易：',
+                    faucetCooldown: '冷却中，约 ', faucetFailed: '失败'
                 }
             };
             let currentLang = 'en';
@@ -1206,15 +1262,19 @@ class WebUIServer {
         
         <div class="tabs">
             <button class="tab active" onclick="switchTab('network')" data-i18n="network">Network</button>
-            <button class="tab" onclick="switchTab('memories')" data-i18n="memoriesTab">Memories</button>
             <button class="tab" onclick="switchTab('tasks')" data-i18n="tasksTab">Tasks</button>
+            ${faucetDashboard
+                ? `<button class="tab" onclick="switchTab('faucet')" data-i18n="faucet">Faucet</button>`
+                : `
+            <button class="tab" onclick="switchTab('memories')" data-i18n="memoriesTab">Memories</button>
             <button class="tab" onclick="switchTab('publish')" data-i18n="publish">Publish</button>
             <button class="tab" onclick="switchTab('transactions')">Transactions</button>
             ${safeDashboard
                 ? `<button class="tab" onclick="switchTab('wallet-lite')">Wallet</button>`
                 : `<button class="tab" onclick="switchTab('account')" data-i18n="accountTab">Account</button>`
             }
-            <button class="tab" onclick="switchTab('stats')" data-i18n="stats">Stats</button>
+            <button class="tab" onclick="switchTab('stats')" data-i18n="stats">Stats</button>`
+            }
         </div>
         
         <div id="network" class="tab-content active">
@@ -1236,7 +1296,7 @@ class WebUIServer {
             </div>
         </div>
         
-        <div id="memories" class="tab-content">
+        ${faucetDashboard ? '' : `<div id="memories" class="tab-content">
             <div class="card">
                 <h2 data-i18n="recentMemories">Recent Memories</h2>
                 <table id="memoriesTable">
@@ -1253,7 +1313,7 @@ class WebUIServer {
                     <tbody></tbody>
                 </table>
             </div>
-        </div>
+        </div>`}
         
         <div id="tasks" class="tab-content">
             <div class="card">
@@ -1273,8 +1333,24 @@ class WebUIServer {
                 </table>
             </div>
         </div>
+
+        ${faucetDashboard
+            ? `<div id="faucet" class="tab-content">
+            <div class="card">
+                <h2 data-i18n="faucetTitle">Faucet</h2>
+                <p style="color:#9fb0c4;margin-bottom:12px;" data-i18n="faucetDesc">10 CLAW per account, once every 24 hours.</p>
+                <div class="form-group">
+                    <label data-i18n="faucetAccountId">Account ID</label>
+                    <input type="text" id="faucetAccountId" placeholder="acct_xxxxxxxxxxxxxxxx">
+                </div>
+                <button class="btn" onclick="claimFaucet()" data-i18n="faucetClaim">Claim 10 CLAW</button>
+                <div id="faucetResult" style="margin-top: 10px;"></div>
+            </div>
+        </div>`
+            : ''
+        }
         
-        <div id="publish" class="tab-content">
+        ${faucetDashboard ? '' : `<div id="publish" class="tab-content">
             <div class="card">
                 <h2 data-i18n="publishTask">Publish Task</h2>
                 <form id="taskForm" onsubmit="publishTask(event)">
@@ -1300,9 +1376,9 @@ class WebUIServer {
             </div>
             
             <!-- Publish Memory Capsule disabled for now -->
-        </div>
+        </div>`}
 
-        ${safeDashboard
+        ${faucetDashboard ? '' : safeDashboard
             ? `<div id="wallet-lite" class="tab-content">
             <div class="card">
                 <h2>Wallet</h2>
@@ -1372,7 +1448,7 @@ class WebUIServer {
         </div>`
         }
         
-        <div id="stats" class="tab-content">
+        ${faucetDashboard ? '' : `<div id="stats" class="tab-content">
             <div class="card">
                 <h2 data-i18n="detailedStats">Detailed Statistics</h2>
                 <div id="detailedStats"></div>
@@ -1417,9 +1493,9 @@ class WebUIServer {
                     <div id="txConfigResult" style="margin-top:10px;"></div>
                 </div>
             </div>
-        </div>
+        </div>`}
         
-        <div id="transactions" class="tab-content">
+        ${faucetDashboard ? '' : `<div id="transactions" class="tab-content">
         <div class="tx-panel">
             <div class="tx-header">
                 <div>
@@ -1453,6 +1529,7 @@ class WebUIServer {
         </div>
     </div>
     </div>
+    ` }
 
     <div id="txModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:999;">
         <div style="max-width:520px;margin:8% auto;background:#151515;padding:20px;border-radius:12px;border:1px solid #2a2a2a;">
@@ -1515,23 +1592,25 @@ class WebUIServer {
             try {
                 const status = await fetch('/api/status').then(r => r.json());
                 updateUI(status);
-                
-                const memories = await fetch('/api/memories').then(r => r.json());
-                updateMemories(memories);
-                
+
                 const tasks = await fetch('/api/tasks').then(r => r.json());
                 updateTasks(tasks);
-                
-                const stats = await fetch('/api/stats').then(r => r.json());
-                updateStats(stats);
-                updateFees(stats);
-                await loadTxConfig();
 
-                const account = await fetch('/api/account').then(r => r.json());
-                updateAccount(account);
+                if (!faucetDashboard) {
+                    const memories = await fetch('/api/memories').then(r => r.json());
+                    updateMemories(memories);
 
-                const txHistory = await fetch('/api/tx/recent?limit=20').then(r => r.json());
-                updateTxHistory(txHistory.items || []);
+                    const stats = await fetch('/api/stats').then(r => r.json());
+                    updateStats(stats);
+                    updateFees(stats);
+                    await loadTxConfig();
+
+                    const account = await fetch('/api/account').then(r => r.json());
+                    updateAccount(account);
+
+                    const txHistory = await fetch('/api/tx/recent?limit=20').then(r => r.json());
+                    updateTxHistory(txHistory.items || []);
+                }
             } catch (e) {
                 console.error('Failed to refresh:', e);
             }
@@ -1769,6 +1848,32 @@ class WebUIServer {
                 }
             } catch (e) {
                 document.getElementById('transferResult').innerHTML = '<span style="color:red">❌ ' + e.message + '</span>';
+            }
+        }
+
+        async function claimFaucet() {
+            const accountId = document.getElementById('faucetAccountId').value.trim();
+            if (!accountId) {
+                document.getElementById('faucetResult').innerHTML = '<span style="color:red">❌ ' + t('faucetProvideAccount') + '</span>';
+                return;
+            }
+            try {
+                const res = await fetch('/api/faucet/claim', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accountId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('faucetResult').innerHTML = '<span style="color:green">✅ ' + t('faucetSent') + (data.txId || '') + '</span>';
+                } else if (data.waitMs) {
+                    const hours = Math.ceil(Number(data.waitMs) / 3600000);
+                    document.getElementById('faucetResult').innerHTML = '<span style="color:red">❌ ' + t('faucetCooldown') + hours + 'h</span>';
+                } else {
+                    document.getElementById('faucetResult').innerHTML = '<span style="color:red">❌ ' + (data.error || t('faucetFailed')) + '</span>';
+                }
+            } catch (e) {
+                document.getElementById('faucetResult').innerHTML = '<span style="color:red">❌ ' + e.message + '</span>';
             }
         }
         

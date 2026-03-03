@@ -105,6 +105,7 @@ OpenClaw GEP - 去中心化技能共享网络
   --bootstrap-ledger    将本节点作为账本创世节点（仅首个记账主需要）
   --consensus-voters <list> 指定投票节点ID列表（逗号分隔 node_xxx）
   --safe-dashboard      安全模式：Dashboard仅显示Account ID/Balance，并禁用Transfer API与命令
+  --faucet-dashboard    水龙头模式：Dashboard仅显示Network/Tasks/Faucet，并禁用Transfer
 
 示例:
   openclaw-gep init MyNode
@@ -179,6 +180,7 @@ async function start(args, configPath = null) {
     const config = loadConfig(configPath);
     const isWindows = process.platform === 'win32';
     const safeDashboard = args.includes('--safe-dashboard') || config.safeDashboard === true;
+    const faucetDashboard = args.includes('--faucet-dashboard') || config.faucetDashboard === true;
     const transferDisabled = safeDashboard || config.transferDisabled === true;
     const cliGenesisNodes = parseAddressList(getArg(args, '--genesis-nodes', ''));
     const cliConsensusVoters = parseAddressList(getArg(args, '--consensus-voters', ''));
@@ -202,7 +204,8 @@ async function start(args, configPath = null) {
         genesisOperatorAccountId: config.genesisOperatorAccountId || null,
         acceptTasks: isWindows ? false : !(args.includes('--no-task') || config.acceptTasks === false),
         safeDashboard,
-        disableTransfer: transferDisabled
+        faucetDashboard,
+        disableTransfer: faucetDashboard ? true : transferDisabled
     };
     
     // 如果有bootstrap参数
@@ -216,6 +219,9 @@ async function start(args, configPath = null) {
         config.transferDisabled = true;
         saveConfig(config);
         console.log('🔒 Safe dashboard mode enabled and saved to config (transfer disabled).');
+    }
+    if (faucetDashboard) {
+        console.log('💧 Faucet dashboard mode enabled (transfer disabled).');
     }
     if (isWindows) {
         console.log('⚠️  Windows detected: task receiving is disabled.');
