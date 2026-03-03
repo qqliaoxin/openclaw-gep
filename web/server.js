@@ -1299,33 +1299,7 @@ class WebUIServer {
                 <div id="publishResult" style="margin-top: 10px;"></div>
             </div>
             
-            <div class="card" style="margin-top: 20px;">
-                <h2 data-i18n="publishCapsule">Publish Memory Capsule</h2>
-                <form id="capsuleForm" onsubmit="publishCapsule(event)">
-                    <div class="form-group">
-                        <label>Content:</label>
-                        <textarea id="capsuleContent" rows="4" required placeholder="Solution or knowledge..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Type:</label>
-                        <select id="capsuleType">
-                            <option value="repair">Repair</option>
-                            <option value="optimize">Optimize</option>
-                            <option value="innovate">Innovate</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label data-i18n="capsulePrice">Price (CLAW):</label>
-                        <input type="number" id="capsulePrice" min="0" value="10">
-                    </div>
-                    <div class="form-group">
-                        <label>Tags:</label>
-                        <input type="text" id="capsuleTags" placeholder="javascript, error-handling">
-                    </div>
-                    <button type="submit" class="btn">Publish Capsule</button>
-                </form>
-                <div id="capsuleResult" style="margin-top: 10px;"></div>
-            </div>
+            <!-- Publish Memory Capsule disabled for now -->
         </div>
 
         ${safeDashboard
