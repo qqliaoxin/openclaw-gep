@@ -804,13 +804,15 @@ All required outputs have been generated and validated.
         }
         
         // Broadcast to P2P network that task is complete
+        const workerAccountId = this.mesh?.wallet?.accountId || null;
+        console.log('[TaskWorker] Broadcasting task completion, accountId:', workerAccountId);
         if (this.mesh.node && this.mesh.node.broadcast) {
             this.mesh.node.broadcast({
                 type: 'task_completed',
                 payload: {
                     taskId: taskId,
                     nodeId: this.nodeId,
-                    accountId: this.mesh?.wallet?.accountId || null,
+                    accountId: workerAccountId,
                     result: {
                         outputFiles: result.outputFiles,
                         completedAt: result.completedAt

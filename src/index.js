@@ -483,7 +483,7 @@ class OpenClawMesh {
             try {
                 if (!payload) return;
                 const { taskId, nodeId, accountId, result, package: taskPackage } = payload;
-                console.log(`✅ Task completed by node: ${nodeId?.slice(0, 16)} for task: ${taskId?.slice(0, 16)}`);
+                console.log(`✅ Task completed by node: ${nodeId?.slice(0, 16)} for task: ${taskId?.slice(0, 16)}, accountId: ${accountId}`);
                 if (taskId) {
                     this.taskBazaar.updateTask(taskId, { 
                         status: 'completed',
@@ -505,10 +505,16 @@ class OpenClawMesh {
                         const bounty = task?.bounty?.amount || 0;
                         const targetAccount = typeof accountId === 'string' ? accountId.trim() : '';
                         const alreadyReleased = !!task?.escrowReleaseTxId;
+                        console.log(`[EscrowRelease] escrowId: ${escrowId}, bounty: ${bounty}, targetAccount: "${targetAccount}", alreadyReleased: ${alreadyReleased}`);
                         if (escrowId && bounty > 0 && targetAccount && !alreadyReleased) {
+                            console.log(`[EscrowRelease] Creating release tx from ${escrowId} to ${targetAccount} amount ${bounty}`);
                             const releaseTx = this.createSignedEscrowRelease(escrowId, targetAccount, bounty);
                             const releaseResult = this.submitTx(releaseTx);
+                            console.log(`[EscrowRelease] Result:`, releaseResult);
                             if (releaseResult?.accepted !== false) {
+                                const fromBalance = this.ledger.getBalance(escrowId);
+                                const toBalance = this.ledger.getBalance(targetAccount);
+                                console.log(`[EscrowRelease] After - escrow balance: ${fromBalance}, target balance: ${toBalance}`);
                                 this.taskBazaar.updateTask(taskId, { escrowReleaseTxId: releaseTx.txId, escrowReleasedAt: new Date().toISOString() });
                             } else {
                                 console.error('Escrow release failed:', releaseResult?.reason || 'unknown');

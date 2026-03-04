@@ -375,6 +375,12 @@ http://localhost:3457/api/account/balance?accountId=acct_xxx
 - 不要再启动 `~/genesis.json`  
 - 业务节点统一 bootstrap 到 `g1`（如 `127.0.0.1:4101`）
 
+./src/cli.js start --config ~/mesh1.json --bootstrap localhost:4101
+./src/cli.js start --config ~/mesh2.json --bootstrap localhost:4102
+./src/cli.js start --config ~/mesh3.json --bootstrap localhost:4103
+
+
+
 另外必须先清理旧分叉数据目录再重启，不然历史不会自动合并。
 已按你这两个要求完成改造。
 
