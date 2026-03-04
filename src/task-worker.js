@@ -810,6 +810,7 @@ All required outputs have been generated and validated.
                 payload: {
                     taskId: taskId,
                     nodeId: this.nodeId,
+                    accountId: this.mesh?.wallet?.accountId || null,
                     result: {
                         outputFiles: result.outputFiles,
                         completedAt: result.completedAt

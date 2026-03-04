@@ -482,14 +482,15 @@ class OpenClawMesh {
         this.node.on('task:completed', async (payload) => {
             try {
                 if (!payload) return;
-                const { taskId, nodeId, result, package: taskPackage } = payload;
+                const { taskId, nodeId, accountId, result, package: taskPackage } = payload;
                 console.log(`✅ Task completed by node: ${nodeId?.slice(0, 16)} for task: ${taskId?.slice(0, 16)}`);
                 if (taskId) {
                     this.taskBazaar.updateTask(taskId, { 
                         status: 'completed',
                         completedBy: nodeId,
                         completedAt: result?.completedAt || Date.now(),
-                        result
+                        result,
+                        completedByAccountId: accountId || null
                     });
                     const task = this.taskBazaar.getTask(taskId);
                     const assignedAt = task?.assignedAt ? Number(task.assignedAt) : null;
@@ -498,6 +499,21 @@ class OpenClawMesh {
                     if (assignedAt && completedAt && completedAt >= assignedAt) {
                         const duration = completedAt - assignedAt;
                         this.ratingStore?.recordCompletion(nodeId, duration);
+                    }
+                    if (this.isLedgerLeader()) {
+                        const escrowId = task?.escrowAccountId;
+                        const bounty = task?.bounty?.amount || 0;
+                        const targetAccount = typeof accountId === 'string' ? accountId.trim() : '';
+                        const alreadyReleased = !!task?.escrowReleaseTxId;
+                        if (escrowId && bounty > 0 && targetAccount && !alreadyReleased) {
+                            const releaseTx = this.createSignedEscrowRelease(escrowId, targetAccount, bounty);
+                            const releaseResult = this.submitTx(releaseTx);
+                            if (releaseResult?.accepted !== false) {
+                                this.taskBazaar.updateTask(taskId, { escrowReleaseTxId: releaseTx.txId, escrowReleasedAt: new Date().toISOString() });
+                            } else {
+                                console.error('Escrow release failed:', releaseResult?.reason || 'unknown');
+                            }
+                        }
                     }
                 }
                 if (taskId && nodeId && taskPackage?.data) {
@@ -1377,8 +1393,12 @@ class OpenClawMesh {
             const escrowId = task?.escrowAccountId;
             const bounty = task?.bounty?.amount || 0;
             if (escrowId && bounty > 0) {
-                const releaseTx = this.createSignedEscrowRelease(escrowId, result.winnerId, bounty);
-                this.submitTx(releaseTx);
+                const winnerAccountId = this.wallet?.accountId || result.winnerAccountId || result.winnerId;
+                const releaseTx = this.createSignedEscrowRelease(escrowId, winnerAccountId, bounty);
+                const releaseResult = this.submitTx(releaseTx);
+                if (releaseResult?.accepted !== false) {
+                    this.taskBazaar.updateTask(taskId, { escrowReleaseTxId: releaseTx.txId, escrowReleasedAt: new Date().toISOString(), completedByAccountId: winnerAccountId });
+                }
             }
         }
         return result;
